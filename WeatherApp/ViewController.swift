@@ -9,11 +9,19 @@ import UIKit
 
 class ViewController: UIViewController {
 
+    var weatherViewModel = WeatherViewModel()
+    var currentWeather: WeatherModel?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view.
+        view.backgroundColor = .red
+        
+        Task{
+            currentWeather = try await weatherViewModel.createRealtimeWeather()
+        }
+        
     }
-
+    
 
 }
 
