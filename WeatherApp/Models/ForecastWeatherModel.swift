@@ -7,9 +7,14 @@
 
 import Foundation
 
-class WeatherModel: Codable {
+class ForecastWeatherModel: Codable {
     let location: Location?
     let current: Current?
+    var forecast: Forecast?
+}
+
+class HistoryWeatherModel: Codable {
+    let location: Location?
     var forecast: Forecast?
 }
 
