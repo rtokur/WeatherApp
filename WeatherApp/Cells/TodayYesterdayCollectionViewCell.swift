@@ -19,7 +19,8 @@ class TodayYesterdayCollectionViewCell: UICollectionViewCell {
     
     let label: UILabel = {
         let label = UILabel()
-        label.font = UIFont(name: "Avenir", size: 12)
+        label.font = UIFont(name: "Avenir",
+                            size: 12)
         label.textColor = .white
         label.textAlignment = .center
         return label
@@ -27,15 +28,17 @@ class TodayYesterdayCollectionViewCell: UICollectionViewCell {
     
     let maxBtn: UIButton = {
         let btn = UIButton()
-        btn.setImage(UIImage(systemName: "arrow.up"), for: .normal)
-        btn.tintColor = .white
+        btn.setImage(UIImage(systemName: "arrow.up"),
+                     for: .normal)
+        btn.tintColor = .lightGray
         return btn
     }()
     
     let minBtn: UIButton = {
         let btn = UIButton()
-        btn.setImage(UIImage(systemName: "arrow.down"), for: .normal)
-        btn.tintColor = .white
+        btn.setImage(UIImage(systemName: "arrow.down"),
+                     for: .normal)
+        btn.tintColor = .lightGray
         return btn
     }()
     
