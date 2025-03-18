@@ -14,6 +14,7 @@ class ViewController: UIViewController {
     var weatherViewModel = WeatherViewModel()
     var forecastWeather: ForecastWeatherModel?
     var historyWeather: HistoryWeatherModel?
+    var hourlyWeather: [HourlyWeather]?
     
     //MARK: UI Elements
     private let imageView: UIImageView = {
@@ -47,6 +48,9 @@ class ViewController: UIViewController {
         button.titleEdgeInsets.left = -200
         button.titleLabel?.font = UIFont(name: "Avenir",
                                          size: 25)
+        button.addTarget(self,
+                         action: #selector(goToMap(_:)),
+                         for: .touchUpInside)
         return button
     }()
     
@@ -160,6 +164,54 @@ class ViewController: UIViewController {
         return view
     }()
     
+    private let scrollView2: UIScrollView = {
+        let scroll = UIScrollView()
+        scroll.showsVerticalScrollIndicator = false
+        return scroll
+    }()
+    
+    private let stackView2: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = 15
+        return stack
+    }()
+    
+    private let lineImage: UIImageView = {
+        let image = UIImageView(image: UIImage(named: "line")?.withTintColor(UIColor(named: "lightgray")!,
+                                                                             renderingMode: .alwaysOriginal))
+        image.contentMode = .scaleAspectFit
+        return image
+    }()
+    
+    private let labell: UILabel = {
+        let label = UILabel()
+        label.text = "Hourly Forecast"
+        label.textColor = .black
+        label.font = UIFont(name: "Avenir", size: 17)
+        return label
+    }()
+    
+    private let hourlyCollection : UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.itemSize = CGSize(width: 55,
+                                 height: 107)
+        let collection = UICollectionView(frame: .zero,
+                                          collectionViewLayout: layout)
+        collection.showsHorizontalScrollIndicator = false
+        return collection
+    }()
+    
+    private let tomorrowLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Tomorrow"
+        label.textColor = .black
+        label.font = UIFont(name: "Avenir",
+                            size: 17)
+        return label
+    }()
+    
     //MARK: Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -207,9 +259,26 @@ class ViewController: UIViewController {
         stackVieww.addArrangedSubview(minBtn)
         
         view.addSubview(forecastView)
+        
         let panGesture = UIPanGestureRecognizer(target: self,
                                                 action: #selector(handlePan(_:)))
         forecastView.addGestureRecognizer(panGesture)
+        
+        forecastView.addSubview(scrollView2)
+        
+        scrollView2.addSubview(stackView2)
+        
+        view.addSubview(lineImage)
+        
+        stackView2.addArrangedSubview(labell)
+        
+        hourlyCollection.delegate = self
+        hourlyCollection.dataSource = self
+        hourlyCollection.register(HourlyCollectionViewCell.self,
+                                  forCellWithReuseIdentifier: "HourlyCollectionViewCell")
+        stackView2.addArrangedSubview(hourlyCollection)
+        
+        stackView2.addArrangedSubview(tomorrowLabel)
     }
     
     func setupConstraints(){
@@ -273,6 +342,29 @@ class ViewController: UIViewController {
             make.bottom.equalToSuperview()
             make.width.equalToSuperview()
         }
+        scrollView2.snp.makeConstraints { make in
+            make.edges.equalToSuperview().inset(20)
+        }
+        stackView2.snp.makeConstraints { make in
+            make.height.equalTo(scrollView2.contentLayoutGuide)
+            make.width.equalTo(scrollView2.frameLayoutGuide)
+        }
+        lineImage.snp.makeConstraints { make in
+            make.top.equalTo(forecastView).inset(5)
+            make.height.equalTo(30)
+            make.centerX.equalToSuperview()
+        }
+        labell.snp.makeConstraints { make in
+            make.height.equalTo(20)
+            make.top.equalTo(lineImage.snp.bottom)
+            
+        }
+        hourlyCollection.snp.makeConstraints { make in
+            make.height.equalTo(107)
+        }
+        tomorrowLabel.snp.makeConstraints { make in
+            make.height.equalTo(20)
+        }
     }
     
     //MARK: Functions
@@ -298,6 +390,11 @@ class ViewController: UIViewController {
                 locationBtn.setTitle("\(city), \(country)",
                                      for: .normal)
                 temperatureLabel.text = "\(Int(tempC))"
+                if Int(tempC) < 10{
+                    degreeLabel.snp.updateConstraints { make in
+                        make.leading.equalTo(temperatureLabel).inset(75)
+                    }
+                }
                 gradientLabel(label: temperatureLabel)
                 gradientLabel(label: degreeLabel)
                 weatherBtn.setTitle(weathertext,
@@ -318,6 +415,10 @@ class ViewController: UIViewController {
                 default:
                     break
                 }
+                if let hours = forecastWeather?.forecast?.forecastday?[0].hour {
+                    hourlyWeather = hours
+                }
+                hourlyCollection.reloadData()
                 todayYesterdayCollection.reloadData()
                 todayCollection.reloadData()
             }
@@ -351,7 +452,8 @@ class ViewController: UIViewController {
                     make.height.equalTo(newHeight)
                 }
             }
-            sender.setTranslation(.zero, in: forecastView)
+            sender.setTranslation(.zero,
+                                  in: forecastView)
         }
         if sender.state == .ended {
             let velocity = sender.velocity(in: forecastView).y
@@ -371,6 +473,7 @@ class ViewController: UIViewController {
                         make.leading.equalTo(225)
                     }
                     self.shortWeatherView.isHidden = false
+                    self.tomorrowLabel.text = "Next 14 days"
                 }else{
                     self.forecastView.snp.updateConstraints { make in
                         make.height.equalTo(firstHeight)
@@ -381,10 +484,19 @@ class ViewController: UIViewController {
                         make.leading.equalTo(320)
                     }
                     self.shortWeatherView.isHidden = true
+                    self.tomorrowLabel.text = "Tomorrow"
                 }
                 self.view.layoutIfNeeded()
             }
         }
+    }
+    
+    @objc func goToMap(_ sender: UIButton){
+        let lvc = LocationVC()
+        let nvc = UINavigationController(rootViewController: lvc)
+        nvc.isModalInPresentation = true
+        nvc.modalPresentationStyle = .fullScreen
+        present(nvc, animated: true)
     }
 }
 
@@ -394,6 +506,8 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
                         numberOfItemsInSection section: Int) -> Int {
         if collectionView == todayYesterdayCollection {
             return 2
+        } else if collectionView == hourlyCollection {
+            return hourlyWeather?.count ?? 0
         }
         return 3
     }
@@ -415,7 +529,10 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
                                          for: .normal)
                     let separatorLayer = CALayer()
                     separatorLayer.backgroundColor = UIColor.lightGray.cgColor
-                    separatorLayer.frame = CGRect(x: cell.bounds.width - 1, y: 15, width: 1, height: cell.bounds.height - 30)
+                    separatorLayer.frame = CGRect(x: cell.bounds.width - 1,
+                                                  y: 15,
+                                                  width: 1,
+                                                  height: cell.bounds.height - 30)
                         
                     cell.layer.addSublayer(separatorLayer)
                 }
@@ -428,6 +545,16 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
                     cell.minBtn.setTitle("\(Int(min))°",
                                          for: .normal)
                 }
+            }
+            return cell
+        }else if collectionView == hourlyCollection {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "HourlyCollectionViewCell",
+                                                          for: indexPath) as! HourlyCollectionViewCell
+            if let time = hourlyWeather?[indexPath.row].time,
+               let tempC = hourlyWeather?[indexPath.row].tempC{
+                let timee = time.components(separatedBy: " ")
+                cell.hourLabel.text = timee[1]
+                cell.temperatureLabel.text = "\(Int(tempC))°"
             }
             return cell
         }
@@ -444,7 +571,10 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
                 
                 let separatorLayer = CALayer()
                 separatorLayer.backgroundColor = UIColor.lightGray.cgColor
-                separatorLayer.frame = CGRect(x: cell.bounds.width - 1, y: 45, width: 1, height: cell.bounds.height - 90)
+                separatorLayer.frame = CGRect(x: cell.bounds.width - 1,
+                                              y: 45,
+                                              width: 1,
+                                              height: cell.bounds.height - 90)
                     
                 cell.layer.addSublayer(separatorLayer)
             }
@@ -457,7 +587,10 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
                                      for: .normal)
                 let separatorLayer = CALayer()
                 separatorLayer.backgroundColor = UIColor.lightGray.cgColor
-                separatorLayer.frame = CGRect(x: cell.bounds.width - 1, y: 45, width: 1, height: cell.bounds.height - 90)
+                separatorLayer.frame = CGRect(x: cell.bounds.width - 1,
+                                              y: 45,
+                                              width: 1,
+                                              height: cell.bounds.height - 90)
                     
                 cell.layer.addSublayer(separatorLayer)
             }
@@ -473,10 +606,6 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
         default:
             break
         }
-        
         return cell
-        
     }
-    
-    
 }

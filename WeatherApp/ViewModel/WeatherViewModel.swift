@@ -53,7 +53,7 @@ class WeatherViewModel {
         return try await createWeather(otherUrl: "/forecast.json",
                                        lan: lan,
                                        lon: lon,
-                                       days: "7",
+                                       days: "14",
                                        dt: nil)
     }
     
