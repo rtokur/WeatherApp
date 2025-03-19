@@ -15,6 +15,8 @@ class ViewController: UIViewController {
     var forecastWeather: ForecastWeatherModel?
     var historyWeather: HistoryWeatherModel?
     var hourlyWeather: [HourlyWeather]?
+    var forecastExceptToday: [ForecastDay]?
+    var selectedIndexPath: IndexPath?
     
     //MARK: UI Elements
     private let imageView: UIImageView = {
@@ -44,8 +46,8 @@ class ViewController: UIViewController {
         button.setImage(UIImage(named: "location"),
                         for: .normal)
         button.tintColor = .white
-        button.imageEdgeInsets.left = -220
-        button.titleEdgeInsets.left = -200
+        button.imageEdgeInsets.left = -200
+        button.titleEdgeInsets.left = -180
         button.titleLabel?.font = UIFont(name: "Avenir",
                                          size: 25)
         button.addTarget(self,
@@ -96,8 +98,6 @@ class ViewController: UIViewController {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
         layout.minimumLineSpacing = 0
-        layout.itemSize = CGSize(width: 200,
-                                 height: 50)
         let collection = UICollectionView(frame: .zero,
                                           collectionViewLayout: layout)
         collection.backgroundColor = UIColor.clear
@@ -111,8 +111,6 @@ class ViewController: UIViewController {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
         layout.minimumLineSpacing = 0
-        layout.itemSize = CGSize(width: 130,
-                                 height: 130)
         let collection = UICollectionView(frame: .zero,
                                           collectionViewLayout: layout)
         collection.backgroundColor = UIColor.clear
@@ -173,12 +171,12 @@ class ViewController: UIViewController {
     private let stackView2: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
-        stack.spacing = 15
+        stack.spacing = 17
         return stack
     }()
     
     private let lineImage: UIImageView = {
-        let image = UIImageView(image: UIImage(named: "line")?.withTintColor(UIColor(named: "lightgray")!,
+        let image = UIImageView(image: UIImage(named: "line")?.withTintColor(.lightGray,
                                                                              renderingMode: .alwaysOriginal))
         image.contentMode = .scaleAspectFit
         return image
@@ -195,8 +193,7 @@ class ViewController: UIViewController {
     private let hourlyCollection : UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
-        layout.itemSize = CGSize(width: 55,
-                                 height: 107)
+        layout.minimumLineSpacing = 25
         let collection = UICollectionView(frame: .zero,
                                           collectionViewLayout: layout)
         collection.showsHorizontalScrollIndicator = false
@@ -210,6 +207,15 @@ class ViewController: UIViewController {
         label.font = UIFont(name: "Avenir",
                             size: 17)
         return label
+    }()
+    
+    private let forecastCollection: UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .vertical
+        let collection = UICollectionView(frame: .zero,
+                                          collectionViewLayout: layout)
+        collection.showsVerticalScrollIndicator = false
+        return collection
     }()
     
     //MARK: Lifecycle
@@ -279,6 +285,11 @@ class ViewController: UIViewController {
         stackView2.addArrangedSubview(hourlyCollection)
         
         stackView2.addArrangedSubview(tomorrowLabel)
+        
+        forecastCollection.delegate = self
+        forecastCollection.dataSource = self
+        forecastCollection.register(ForecastCollectionViewCell.self, forCellWithReuseIdentifier: "ForecastCollectionViewCell")
+        stackView2.addArrangedSubview(forecastCollection)
     }
     
     func setupConstraints(){
@@ -323,10 +334,10 @@ class ViewController: UIViewController {
             make.height.equalToSuperview()
         }
         weatherBtn.snp.makeConstraints { make in
-            make.width.equalTo(170)
-            make.height.equalTo(30)
-            make.top.equalTo(210)
-            make.leading.equalTo(320)
+            make.width.equalTo(250)
+            make.height.equalTo(40)
+            make.top.equalTo(175)
+            make.leading.equalTo(270)
         }
         todayYesterdayCollection.snp.makeConstraints { make in
             make.height.equalTo(50)
@@ -357,13 +368,16 @@ class ViewController: UIViewController {
         labell.snp.makeConstraints { make in
             make.height.equalTo(20)
             make.top.equalTo(lineImage.snp.bottom)
-            
         }
         hourlyCollection.snp.makeConstraints { make in
             make.height.equalTo(107)
         }
         tomorrowLabel.snp.makeConstraints { make in
             make.height.equalTo(20)
+        }
+        forecastCollection.snp.makeConstraints { make in
+            make.width.equalToSuperview()
+            make.height.equalTo(370)
         }
     }
     
@@ -376,10 +390,10 @@ class ViewController: UIViewController {
                                               to: Date())!
         let date = dateFormatter.string(from: yesterday)
         Task{
-            forecastWeather = try await weatherViewModel.getForecastWeather(lan: 48.8567,
-                                                                            lon: 2.3508)
-            historyWeather = try await weatherViewModel.getHistoryWeather(lan: 48.8567,
-                                                                          lon: 2.3508,
+            forecastWeather = try await weatherViewModel.getForecastWeather(lan: 39.905813882316195,
+                                                                            lon: 41.26454355500077)
+            historyWeather = try await weatherViewModel.getHistoryWeather(lan: 39.905813882316195,
+                                                                          lon: 41.26454355500077,
                                                                           dt: date)
             if let tempC = forecastWeather?.current?.tempC as? Double,
                let weathertext = forecastWeather?.current?.condition?.text as? String,
@@ -397,23 +411,25 @@ class ViewController: UIViewController {
                 }
                 gradientLabel(label: temperatureLabel)
                 gradientLabel(label: degreeLabel)
+
                 weatherBtn.setTitle(weathertext,
                                     for: .normal)
                 maxBtn.setTitle("\(Int(max))°",
                                 for: .normal)
                 minBtn.setTitle("\(Int(min))°",
                                 for: .normal)
-                switch weathertext {
-                case "Sunny":
-                    weatherBtn.setImage(UIImage(systemName: "sun.max")?.withTintColor(.white,
-                                                                                      renderingMode: .alwaysOriginal),
+                var text2 = weathertext
+                if text2.hasSuffix(" "){
+                    text2.remove(at: text2.index(before: text2.endIndex))
+                }
+                if text2 == "Partly cloudy"{
+                    weatherBtn.setImage(UIImage(named: "\(text2) 1")?.withTintColor(.white,
+                                                                                          renderingMode: .alwaysOriginal),
                                         for: .normal)
-                case "Cloudy":
-                    weatherBtn.setImage(UIImage(systemName: "cloud")?.withTintColor(.white,
+                }else {
+                    weatherBtn.setImage(UIImage(systemName: text2)?.withTintColor(.white,
                                                                                     renderingMode: .alwaysOriginal),
                                         for: .normal)
-                default:
-                    break
                 }
                 if let hours = forecastWeather?.forecast?.forecastday?[0].hour {
                     hourlyWeather = hours
@@ -421,6 +437,13 @@ class ViewController: UIViewController {
                 hourlyCollection.reloadData()
                 todayYesterdayCollection.reloadData()
                 todayCollection.reloadData()
+                forecastExceptToday = forecastWeather?.forecast?.forecastday
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                let datee = dateFormatter.string(from: Date())
+                forecastExceptToday = forecastExceptToday?.filter { $0.date != datee }
+                forecastCollection.reloadData()
+                
             }
         }
     }
@@ -480,8 +503,8 @@ class ViewController: UIViewController {
                     }
                     self.weatherBtn.transform = CGAffineTransform(rotationAngle: -CGFloat.pi / 2)
                     self.weatherBtn.snp.updateConstraints { make in
-                        make.top.equalTo(210)
-                        make.leading.equalTo(320)
+                        make.top.equalTo(175)
+                        make.leading.equalTo(270)
                     }
                     self.shortWeatherView.isHidden = true
                     self.tomorrowLabel.text = "Tomorrow"
@@ -501,13 +524,18 @@ class ViewController: UIViewController {
 }
 
 //MARK: Delegates
-extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
+extension ViewController: UICollectionViewDelegate,
+                          UICollectionViewDataSource,
+                          UICollectionViewDelegateFlowLayout {
+    
     func collectionView(_ collectionView: UICollectionView,
                         numberOfItemsInSection section: Int) -> Int {
         if collectionView == todayYesterdayCollection {
             return 2
         } else if collectionView == hourlyCollection {
             return hourlyWeather?.count ?? 0
+        } else if collectionView == forecastCollection {
+            return forecastExceptToday?.count ?? 0
         }
         return 3
     }
@@ -551,11 +579,61 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "HourlyCollectionViewCell",
                                                           for: indexPath) as! HourlyCollectionViewCell
             if let time = hourlyWeather?[indexPath.row].time,
-               let tempC = hourlyWeather?[indexPath.row].tempC{
+               let tempC = hourlyWeather?[indexPath.row].tempC,
+               let text = hourlyWeather?[indexPath.row].condition?.text{
                 let timee = time.components(separatedBy: " ")
                 cell.hourLabel.text = timee[1]
                 cell.temperatureLabel.text = "\(Int(tempC))°"
+                var text2 = text
+                if text2.hasSuffix(" "){
+                    text2.remove(at: text2.index(before: text2.endIndex))
+                }
+                if text2 == "Partly cloudy"{
+                    cell.weatherImage.image = UIImage(named: "\(text2) 1")?.withRenderingMode(.alwaysOriginal)
+                }else {
+                    cell.weatherImage.image = UIImage(named: "\(text2)")?.withRenderingMode(.alwaysOriginal)
+                }
             }
+            return cell
+        }else if collectionView == forecastCollection {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "ForecastCollectionViewCell",
+                                                          for: indexPath) as! ForecastCollectionViewCell
+            if let max = forecastExceptToday?[indexPath.row].day?.maxtempC as? Double,
+               let min = forecastExceptToday?[indexPath.row].day?.mintempC as? Double,
+               let text = forecastExceptToday?[indexPath.row].day?.condition?.text as? String{
+                cell.maxBtn.setTitle("\(Int(max))°",
+                                     for: .normal)
+                cell.minBtn.setTitle("\(Int(min))°",
+                                     for: .normal)
+                var text2 = text
+                if text2.hasSuffix(" "){
+                    text2.remove(at: text2.index(before: text2.endIndex))
+                }
+                if text2 == "Partly cloudy"{
+                    cell.weatherIcon.image = UIImage(named: "\(text2) 1")?.withRenderingMode(.alwaysOriginal)
+                }else {
+                    cell.weatherIcon.image = UIImage(named: "\(text2)")?.withRenderingMode(.alwaysOriginal)
+                }
+            }
+            if indexPath.row == 0 {
+                cell.tomorrowLabel.text = "Tomorrow"
+            } else {
+                if let date = forecastExceptToday?[indexPath.row].date as? String {
+                    let date2 = DateFormatter()
+                    date2.dateFormat = "yyyy-MM-dd"
+                    let datee = date2.date(from: date)!
+                    let dateFormat = DateFormatter()
+                    dateFormat.dateFormat = "EEEE, dd MMM"
+                    let date3 = dateFormat.string(from: datee)
+                    cell.tomorrowLabel.text = "\(date3)"
+                }
+            }
+            if let text = forecastExceptToday?[indexPath.row].day?.condition?.text as? String {
+                cell.weatherBtn.setTitle(text,
+                                         for: .normal)
+            }
+            cell.weatherBtn.titleEdgeInsets.left = 1
+            cell.weatherBtn.imageEdgeInsets.right = 1
             return cell
         }
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "TodayCollectionViewCell",
@@ -607,5 +685,51 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
             break
         }
         return cell
+    }
+    
+    func collectionView(_ collectionView: UICollectionView,
+                        layout collectionViewLayout: UICollectionViewLayout,
+                        sizeForItemAt indexPath: IndexPath) -> CGSize {
+        if collectionView == forecastCollection {
+            let width = collectionView.frame.width
+            if indexPath == selectedIndexPath {
+                return CGSize(width: width,
+                              height: 300)
+            }else{
+                return CGSize(width: width,
+                              height: 100)
+            }
+            
+        }else if collectionView == todayYesterdayCollection {
+            let width = collectionView.frame.width / 2
+            return CGSize(width: width,
+                          height: 50)
+        }else if collectionView == todayCollection {
+            let width = collectionView.frame.width / 3
+            return CGSize(width: width,
+                          height: 130)
+        }
+        return CGSize(width: 55,
+                      height: 107)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView,
+                        didSelectItemAt indexPath: IndexPath) {
+        if collectionView == forecastCollection {
+            if selectedIndexPath == indexPath {
+                selectedIndexPath = nil
+            }else{
+                selectedIndexPath = indexPath
+            }
+            if let cell = collectionView.cellForItem(at: indexPath) as? ForecastCollectionViewCell {
+                cell.stackView3.snp.updateConstraints { make in
+                    make.height.equalTo(200)
+                }
+            }
+            collectionView.performBatchUpdates ({
+                collectionView.reloadItems(at: [indexPath])
+            }, completion: nil)
+
+        }
     }
 }
