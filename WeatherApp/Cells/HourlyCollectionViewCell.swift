@@ -28,7 +28,8 @@ class HourlyCollectionViewCell: UICollectionViewCell {
     let hourLabel: UILabel = {
         let label = UILabel()
         label.textColor = .lightGray
-        label.font = UIFont(name: "Avenir", size: 12)
+        label.font = UIFont(name: "Avenir",
+                            size: 12)
         label.textAlignment = .center
         return label
     }()

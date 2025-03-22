@@ -404,7 +404,12 @@ class ViewController: UIViewController {
                 locationBtn.setTitle("\(city), \(country)",
                                      for: .normal)
                 temperatureLabel.text = "\(Int(tempC))"
-                if Int(tempC) < 10{
+                if Int(tempC)<0 && abs(tempC) > 10{
+                    degreeLabel.snp.updateConstraints { make in
+                        make.leading.equalTo(temperatureLabel).inset(225)
+                    }
+                }
+                else if Int(tempC) < 10 && Int(tempC) > 0 {
                     degreeLabel.snp.updateConstraints { make in
                         make.leading.equalTo(temperatureLabel).inset(75)
                     }
@@ -433,6 +438,18 @@ class ViewController: UIViewController {
                 }
                 if let hours = forecastWeather?.forecast?.forecastday?[0].hour {
                     hourlyWeather = hours
+                }
+                let dateFormatterr = DateFormatter()
+                dateFormatterr.dateFormat = "yyyy-MM-dd HH:mm"
+                let date2 = dateFormatterr.string(from: Date())
+                hourlyWeather = hourlyWeather?.filter{ $0.time! > date2}
+                if hourlyWeather!.count < 12 {
+                    let count = 12 - (hourlyWeather!.count)
+                    if let hourr = forecastWeather?.forecast?.forecastday?[1].hour{
+                        for i in 0..<count {
+                            hourlyWeather?.append(hourr[i])
+                        }
+                    }
                 }
                 hourlyCollection.reloadData()
                 todayYesterdayCollection.reloadData()
@@ -598,6 +615,10 @@ extension ViewController: UICollectionViewDelegate,
         }else if collectionView == forecastCollection {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "ForecastCollectionViewCell",
                                                           for: indexPath) as! ForecastCollectionViewCell
+            if let forecast = self.forecastExceptToday?[indexPath.row] {
+                cell.forecastDay = forecast
+            }
+            
             if let max = forecastExceptToday?[indexPath.row].day?.maxtempC as? Double,
                let min = forecastExceptToday?[indexPath.row].day?.mintempC as? Double,
                let text = forecastExceptToday?[indexPath.row].day?.condition?.text as? String{
@@ -631,6 +652,11 @@ extension ViewController: UICollectionViewDelegate,
             if let text = forecastExceptToday?[indexPath.row].day?.condition?.text as? String {
                 cell.weatherBtn.setTitle(text,
                                          for: .normal)
+            }
+            if selectedIndexPath == indexPath {
+                cell.stackView3.isHidden = false
+            }else{
+                cell.stackView3.isHidden = true
             }
             cell.weatherBtn.titleEdgeInsets.left = 1
             cell.weatherBtn.imageEdgeInsets.right = 1
@@ -694,7 +720,7 @@ extension ViewController: UICollectionViewDelegate,
             let width = collectionView.frame.width
             if indexPath == selectedIndexPath {
                 return CGSize(width: width,
-                              height: 300)
+                              height: 400)
             }else{
                 return CGSize(width: width,
                               height: 100)
@@ -721,12 +747,7 @@ extension ViewController: UICollectionViewDelegate,
             }else{
                 selectedIndexPath = indexPath
             }
-            if let cell = collectionView.cellForItem(at: indexPath) as? ForecastCollectionViewCell {
-                cell.stackView3.snp.updateConstraints { make in
-                    make.height.equalTo(200)
-                }
-            }
-            collectionView.performBatchUpdates ({
+            collectionView.performBatchUpdates({
                 collectionView.reloadItems(at: [indexPath])
             }, completion: nil)
 
