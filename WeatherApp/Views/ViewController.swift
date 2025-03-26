@@ -7,8 +7,9 @@
 
 import UIKit
 import SnapKit
+import CoreLocation
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, SetLocation {
     
     //MARK: Properties
     var weatherViewModel = WeatherViewModel()
@@ -17,6 +18,7 @@ class ViewController: UIViewController {
     var hourlyWeather: [HourlyWeather]?
     var forecastExceptToday: [ForecastDay]?
     var selectedIndexPath: IndexPath?
+    let locationManager = CLLocationManager()
     
     //MARK: UI Elements
     private let imageView: UIImageView = {
@@ -197,6 +199,7 @@ class ViewController: UIViewController {
         let collection = UICollectionView(frame: .zero,
                                           collectionViewLayout: layout)
         collection.showsHorizontalScrollIndicator = false
+        collection.backgroundColor = .white
         return collection
     }()
     
@@ -215,6 +218,7 @@ class ViewController: UIViewController {
         let collection = UICollectionView(frame: .zero,
                                           collectionViewLayout: layout)
         collection.showsVerticalScrollIndicator = false
+        collection.backgroundColor = .white
         return collection
     }()
     
@@ -224,11 +228,18 @@ class ViewController: UIViewController {
         
         setupViews()
         setupConstraints()
-        getData()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
     }
     
     //MARK: Setup Methods
     func setupViews(){
+        locationManager.delegate = self
+        locationManager.requestWhenInUseAuthorization()
+        locationManager.startUpdatingLocation()
+        
         view.backgroundColor = UIColor(named: "Color")
         view.addSubview(imageView)
         view.addSubview(scrollView)
@@ -382,7 +393,7 @@ class ViewController: UIViewController {
     }
     
     //MARK: Functions
-    func getData(){
+    func getData(lan: Double, lon: Double){
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let yesterday = Calendar.current.date(byAdding: .day,
@@ -390,10 +401,10 @@ class ViewController: UIViewController {
                                               to: Date())!
         let date = dateFormatter.string(from: yesterday)
         Task{
-            forecastWeather = try await weatherViewModel.getForecastWeather(lan: 39.905813882316195,
-                                                                            lon: 41.26454355500077)
-            historyWeather = try await weatherViewModel.getHistoryWeather(lan: 39.905813882316195,
-                                                                          lon: 41.26454355500077,
+            forecastWeather = try await weatherViewModel.getForecastWeather(lan: lan,
+                                                                            lon: lon)
+            historyWeather = try await weatherViewModel.getHistoryWeather(lan: lan,
+                                                                          lon: lon,
                                                                           dt: date)
             if let tempC = forecastWeather?.current?.tempC as? Double,
                let weathertext = forecastWeather?.current?.condition?.text as? String,
@@ -465,6 +476,19 @@ class ViewController: UIViewController {
         }
     }
     
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if let location = locations.first {
+            let latitude = location.coordinate.latitude
+            let longitude = location.coordinate.longitude
+            getData(lan: latitude, lon: longitude)
+            locationManager.stopUpdatingLocation()
+        }
+    }
+    
+    func setLocation(lan: Double, lon: Double){
+        getData(lan: lan, lon: lon)
+    }
+    
     func gradientLabel(label: UILabel){
         let gradiantLayer = CAGradientLayer()
         gradiantLayer.frame = label.bounds
@@ -533,6 +557,7 @@ class ViewController: UIViewController {
     
     @objc func goToMap(_ sender: UIButton){
         let lvc = LocationVC()
+        lvc.delegate = self
         let nvc = UINavigationController(rootViewController: lvc)
         nvc.isModalInPresentation = true
         nvc.modalPresentationStyle = .fullScreen
@@ -543,7 +568,8 @@ class ViewController: UIViewController {
 //MARK: Delegates
 extension ViewController: UICollectionViewDelegate,
                           UICollectionViewDataSource,
-                          UICollectionViewDelegateFlowLayout {
+                          UICollectionViewDelegateFlowLayout,
+                          CLLocationManagerDelegate{
     
     func collectionView(_ collectionView: UICollectionView,
                         numberOfItemsInSection section: Int) -> Int {

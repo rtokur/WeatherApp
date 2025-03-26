@@ -57,8 +57,8 @@ class WeatherViewModel {
                                        dt: nil)
     }
     
-    func getHistoryWeather(lan: Double,
-                           lon: Double,
+    func getHistoryWeather(lan: Double = 39.905813882316195,
+                           lon: Double = 41.26454355500077,
                            dt: String) async throws -> HistoryWeatherModel {
         return try await createWeather(otherUrl: "/history.json",
                                        lan: lan,

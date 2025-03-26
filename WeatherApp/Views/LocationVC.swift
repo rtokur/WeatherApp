@@ -8,8 +8,16 @@
 import UIKit
 import SnapKit
 import MapKit
+import CoreLocation
 
-class LocationVC: UIViewController {
+protocol SetLocation {
+    func setLocation(lan: Double,lon: Double)
+}
+
+class LocationVC: UIViewController, CLLocationManagerDelegate {
+    
+    var delegate: SetLocation?
+    let locationManager = CLLocationManager()
     
     //MARK: UI Elements
     let searchBar: UISearchBar = {
@@ -33,6 +41,7 @@ class LocationVC: UIViewController {
         btn.setImage(UIImage(named: "location 1")?.withRenderingMode(.alwaysOriginal),
                      for: .normal)
         btn.layer.cornerRadius = 10
+        btn.addTarget(self, action: #selector(currentLocation(_:)), for: .touchUpInside)
         return btn
     }()
     
@@ -114,6 +123,7 @@ class LocationVC: UIViewController {
         placeView.addSubview(stackView)
         stackView.addArrangedSubview(image)
         stackView.addArrangedSubview(locationLabel)
+        locationManager.delegate = self
     }
     
     func setupConstraints(){
@@ -148,35 +158,60 @@ class LocationVC: UIViewController {
         locationLabel.snp.makeConstraints { make in
             make.height.equalToSuperview()
         }
-        
     }
     
     //MARK: Functions
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         guard let location = searchBar.text else { return }
         searchBar.resignFirstResponder()
+        findLocation(locationName: location,
+                     location: nil)
+    }
+    
+    func findLocation(locationName: String?, location: CLLocation?){
         placeView.isHidden = false
-
         let geocoder = CLGeocoder()
-        geocoder.geocodeAddressString(location,
-                                      in: nil,
-                                      preferredLocale: Locale(identifier: "en_US")) { placemark, error in
-            guard error == nil else {
-                print(error?.localizedDescription)
-                return
+        if let locationname = locationName {
+            geocoder.geocodeAddressString(locationname,
+                                          in: nil,
+                                          preferredLocale: Locale(identifier: "en_US")) { placemark, error in
+                guard error == nil,
+                      let placemarkfirst = placemark?.first else {
+                    print(error?.localizedDescription)
+                    return
+                }
+                self.pickLocation(placemark: placemarkfirst)
             }
-            if let center = (placemark?.first?.region as? CLCircularRegion)?.center,
-               let city = placemark?.first?.locality{
-                let region = MKCoordinateRegion(center: center,
-                                                span: MKCoordinateSpan(latitudeDelta: 0.1,
-                                                                       longitudeDelta: 0.1))
-                self.map.setRegion(region,
-                                   animated: true)
-                self.locationLabel.text = city
-                self.addAnnotation(latitude: center.latitude,
-                                   longitude: center.longitude,
-                                   title: city)
+        }else if let locationn = location{
+            geocoder.reverseGeocodeLocation(locationn, preferredLocale: Locale(identifier: "en_US")) { placemark, error in
+                guard error == nil,
+                      let placemarkfirst = placemark?.first else {
+                    print(error?.localizedDescription)
+                    return
+                }
+                self.pickLocation(placemark: placemarkfirst)
             }
+        }
+    }
+    
+    func pickLocation(placemark: CLPlacemark){
+        if let center = (placemark.region as? CLCircularRegion)?.center,
+           let city = placemark.locality{
+            let region = MKCoordinateRegion(center: center,
+                                            span: MKCoordinateSpan(latitudeDelta: 0.1,
+                                                                   longitudeDelta: 0.1))
+            self.map.setRegion(region,
+                               animated: true)
+            self.locationLabel.text = city
+            if let first = self.map.annotations.first {
+                self.map.removeAnnotation(first)
+            }
+            
+            self.addAnnotation(latitude: center.latitude,
+                               longitude: center.longitude,
+                               title: city)
+            self.delegate?.setLocation(lan: center.latitude,
+                                       lon: center.longitude)
         }
     }
     
@@ -191,9 +226,26 @@ class LocationVC: UIViewController {
         self.map.addAnnotation(annotation)
     }
     
+    func locationManager(_ manager: CLLocationManager,
+                         didUpdateLocations locations: [CLLocation]) {
+        if let location = locations.first {
+            let latitude = location.coordinate.latitude
+            let longitude = location.coordinate.longitude
+            findLocation(locationName: nil,
+                         location: location)
+            locationManager.stopUpdatingLocation()
+        }
+    }
+    
     //MARK: Actions
     @objc func backButtonAction(_ sender: UIButton){
         dismiss(animated: true)
+    }
+    
+    
+    @objc func currentLocation(_ sender: UIButton){
+        locationManager.requestAlwaysAuthorization()
+        locationManager.startUpdatingLocation()
     }
 }
 
