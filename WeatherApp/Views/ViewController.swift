@@ -19,6 +19,7 @@ class ViewController: UIViewController, SetLocation {
     var forecastExceptToday: [ForecastDay]?
     var selectedIndexPath: IndexPath?
     let locationManager = CLLocationManager()
+    private var top: Constraint? = nil
     
     //MARK: UI Elements
     private let imageView: UIImageView = {
@@ -27,16 +28,11 @@ class ViewController: UIViewController, SetLocation {
         return image
     }()
     
-    private let scrollView: UIScrollView = {
-        let scroll = UIScrollView()
-        scroll.showsVerticalScrollIndicator = false
-        return scroll
-    }()
-    
     private let stackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
         stack.backgroundColor = .clear
+        stack.spacing = 10
         return stack
     }()
     
@@ -48,8 +44,23 @@ class ViewController: UIViewController, SetLocation {
         button.setImage(UIImage(named: "location"),
                         for: .normal)
         button.tintColor = .white
-        button.imageEdgeInsets.left = -200
-        button.titleEdgeInsets.left = -180
+        button.contentHorizontalAlignment = .leading
+        button.imageView?.contentMode = .scaleAspectFit
+        button.titleLabel?.lineBreakMode = .byTruncatingTail
+        
+        button.semanticContentAttribute = .forceLeftToRight
+        button.imageEdgeInsets = UIEdgeInsets(top: 0,
+                                              left: 0,
+                                              bottom: 0,
+                                              right: 10)
+        button.titleEdgeInsets = UIEdgeInsets(top: 0,
+                                              left: 10,
+                                              bottom: 0,
+                                              right: 0)
+        button.contentEdgeInsets = UIEdgeInsets(top: 0,
+                                                left: 0,
+                                                bottom: 0,
+                                                right: 0)
         button.titleLabel?.font = UIFont(name: "Avenir",
                                          size: 25)
         button.addTarget(self,
@@ -91,11 +102,22 @@ class ViewController: UIViewController, SetLocation {
         btn.setTitleColor(.white,
                           for: .normal)
         btn.transform = CGAffineTransform(rotationAngle: -CGFloat.pi / 2)
-        btn.titleEdgeInsets.right = 80
-        btn.imageEdgeInsets.right = 90
+        btn.semanticContentAttribute = .forceLeftToRight
+        btn.contentHorizontalAlignment = .right
+        btn.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 10)
+        btn.titleEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
         return btn
     }()
-        
+    
+    private let shortWeatherView: UIView = {
+        let view = UIView()
+        view.isHidden = true
+        view.layer.borderColor = UIColor.lightGray.cgColor
+        view.layer.borderWidth = 1
+        view.layer.cornerRadius = 22.5
+        return view
+    }()
+    
     private let todayYesterdayCollection: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
@@ -120,15 +142,6 @@ class ViewController: UIViewController, SetLocation {
         collection.layer.borderWidth = 1
         collection.layer.cornerRadius = 40
         return collection
-    }()
-    
-    private let shortWeatherView: UIView = {
-        let view = UIView()
-        view.isHidden = true
-        view.layer.borderColor = UIColor.lightGray.cgColor
-        view.layer.borderWidth = 1
-        view.layer.cornerRadius = 22.5
-        return view
     }()
     
     private let stackVieww: UIStackView = {
@@ -233,6 +246,13 @@ class ViewController: UIViewController, SetLocation {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
     }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        self.forecastCollection.snp.updateConstraints { make in
+            make.height.equalTo(self.forecastCollection.collectionViewLayout.collectionViewContentSize.height)
+        }
+    }
     
     //MARK: Setup Methods
     func setupViews(){
@@ -242,9 +262,8 @@ class ViewController: UIViewController, SetLocation {
         
         view.backgroundColor = UIColor(named: "Color")
         view.addSubview(imageView)
-        view.addSubview(scrollView)
         
-        scrollView.addSubview(stackView)
+        view.addSubview(stackView)
         
         stackView.addArrangedSubview(locationBtn)
         
@@ -260,20 +279,22 @@ class ViewController: UIViewController, SetLocation {
         
         view.addSubview(weatherBtn)
         
+        view.addSubview(shortWeatherView)
+        shortWeatherView.addSubview(stackVieww)
+        stackVieww.addArrangedSubview(maxBtn)
+        stackVieww.addArrangedSubview(minBtn)
+        
         todayYesterdayCollection.delegate = self
         todayYesterdayCollection.dataSource = self
         todayYesterdayCollection.register(TodayYesterdayCollectionViewCell.self,
                                           forCellWithReuseIdentifier: "TodayYesterdayCollectionViewCell")
         stackView.addArrangedSubview(todayYesterdayCollection)
+        
         todayCollection.delegate = self
         todayCollection.dataSource = self
         todayCollection.register(TodayCollectionViewCell.self,
                                  forCellWithReuseIdentifier: "TodayCollectionViewCell")
-        view.addSubview(todayCollection)
-        view.addSubview(shortWeatherView)
-        shortWeatherView.addSubview(stackVieww)
-        stackVieww.addArrangedSubview(maxBtn)
-        stackVieww.addArrangedSubview(minBtn)
+        stackView.addArrangedSubview(todayCollection)
         
         view.addSubview(forecastView)
         
@@ -305,15 +326,12 @@ class ViewController: UIViewController, SetLocation {
     
     func setupConstraints(){
         imageView.snp.makeConstraints { make in
-            make.top.equalTo(view)
-            make.bottom.equalTo(forecastView)
-        }
-        scrollView.snp.makeConstraints { make in
-            make.edges.equalTo(view.safeAreaLayoutGuide).inset(20)
+            make.edges.equalToSuperview()
         }
         stackView.snp.makeConstraints { make in
-            make.height.equalTo(scrollView.contentLayoutGuide)
-            make.width.equalTo(scrollView.frameLayoutGuide)
+            make.trailing.leading.equalToSuperview().inset(20)
+            make.top.equalToSuperview().inset(40)
+            make.height.equalTo(465)
         }
         locationBtn.snp.makeConstraints { make in
             make.height.equalTo(70)
@@ -347,8 +365,8 @@ class ViewController: UIViewController, SetLocation {
         weatherBtn.snp.makeConstraints { make in
             make.width.equalTo(250)
             make.height.equalTo(40)
-            make.top.equalTo(175)
-            make.leading.equalTo(270)
+            make.centerX.equalToSuperview().multipliedBy(1.85)
+            make.top.equalTo(degreeLabel.snp.bottom).offset(20)
         }
         todayYesterdayCollection.snp.makeConstraints { make in
             make.height.equalTo(50)
@@ -356,11 +374,9 @@ class ViewController: UIViewController, SetLocation {
         }
         todayCollection.snp.makeConstraints { make in
             make.height.equalTo(130)
-            make.leading.trailing.equalTo(stackView)
-            make.top.equalTo(todayYesterdayCollection.snp.bottom).offset(40)
         }
         forecastView.snp.makeConstraints { make in
-            make.height.equalTo(360)
+            top = make.top.equalTo(stackView.snp.bottom).offset(10).constraint
             make.bottom.equalToSuperview()
             make.width.equalToSuperview()
         }
@@ -388,7 +404,7 @@ class ViewController: UIViewController, SetLocation {
         }
         forecastCollection.snp.makeConstraints { make in
             make.width.equalToSuperview()
-            make.height.equalTo(370)
+            make.height.equalTo(1)
         }
     }
     
@@ -471,7 +487,6 @@ class ViewController: UIViewController, SetLocation {
                 let datee = dateFormatter.string(from: Date())
                 forecastExceptToday = forecastExceptToday?.filter { $0.date != datee }
                 forecastCollection.reloadData()
-                
             }
         }
     }
@@ -505,20 +520,18 @@ class ViewController: UIViewController, SetLocation {
     //MARK: Actions
     @objc func handlePan(_ sender: UIPanGestureRecognizer){
         let translation = sender.translation(in: forecastView)
-        let todayCollection = self.todayCollection.frame.height + self.todayYesterdayCollection.frame.height + 90
-        let firstHeight: CGFloat = 360
+
         if sender.state == .changed {
-            let newHeight = max(firstHeight,
-                                forecastView.frame.height - translation.y)
-            
-            UIView.animate(withDuration: 0.2) {
-                self.forecastView.snp.updateConstraints { make in
-                    make.height.equalTo(newHeight)
-                }
+            self.top?.deactivate()
+            self.forecastView.snp.makeConstraints { make in
+                make.top.equalTo(self.stackView.snp.bottom).offset(translation.y + 10)
+                make.bottom.equalToSuperview()
+                make.width.equalToSuperview()
             }
-            sender.setTranslation(.zero,
-                                  in: forecastView)
+            sender.setTranslation(.zero, in: forecastView)
+            self.forecastView.layoutIfNeeded()
         }
+        
         if sender.state == .ended {
             let velocity = sender.velocity(in: forecastView).y
             
@@ -527,30 +540,36 @@ class ViewController: UIViewController, SetLocation {
                            usingSpringWithDamping: 0.7,
                            initialSpringVelocity: 0.5,
                            options: .curveEaseOut) {
-                if velocity < 0{
-                    self.forecastView.snp.updateConstraints { make in
-                        make.height.equalTo(firstHeight + todayCollection)
+                
+                if velocity < 0 {
+                    self.forecastView.snp.remakeConstraints { make in
+                        make.top.equalTo(self.degreeLabel.snp.bottom).offset(60)
+                        make.bottom.equalToSuperview()
+                        make.width.equalToSuperview()
                     }
-                    self.weatherBtn.transform = CGAffineTransform(rotationAngle: CGFloat.pi * 2 )
-                    self.weatherBtn.snp.updateConstraints { make in
-                        make.top.equalTo(270)
-                        make.leading.equalTo(225)
-                    }
+                    //                    self.weatherBtn.transform = CGAffineTransform(rotationAngle: CGFloat.pi * 2)
+                    //                    self.weatherBtn.snp.updateConstraints { make in
+                    //                        make.top.equalTo(270)
+                    //                        make.leading.equalTo(225)
+                    //                    }
                     self.shortWeatherView.isHidden = false
                     self.tomorrowLabel.text = "Next 14 days"
-                }else{
-                    self.forecastView.snp.updateConstraints { make in
-                        make.height.equalTo(firstHeight)
+                } else {
+                    self.forecastView.snp.remakeConstraints { make in
+                        make.top.equalTo(self.stackView.snp.bottom).offset(10)
+                        make.bottom.equalToSuperview()
+                        make.width.equalToSuperview()
                     }
-                    self.weatherBtn.transform = CGAffineTransform(rotationAngle: -CGFloat.pi / 2)
-                    self.weatherBtn.snp.updateConstraints { make in
-                        make.top.equalTo(175)
-                        make.leading.equalTo(270)
-                    }
+                    //                    self.weatherBtn.transform = CGAffineTransform(rotationAngle: -CGFloat.pi / 2)
+                    //                    self.weatherBtn.snp.updateConstraints { make in
+                    //                        make.top.equalTo(175)
+                    //                        make.leading.equalTo(270)
+                    //                    }
                     self.shortWeatherView.isHidden = true
                     self.tomorrowLabel.text = "Tomorrow"
                 }
-                self.view.layoutIfNeeded()
+                
+                self.forecastView.layoutIfNeeded()
             }
         }
     }

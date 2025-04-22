@@ -21,7 +21,13 @@ class TodayCollectionViewCell: UICollectionViewCell {
         let btn = UIButton()
         btn.tintColor = .white
         btn.titleEdgeInsets.left = 10
-        btn.imageEdgeInsets.left = 1
+        btn.imageEdgeInsets.right = 10
+        btn.contentHorizontalAlignment = .leading
+        btn.titleLabel?.lineBreakMode = .byTruncatingTail
+        btn.contentEdgeInsets = UIEdgeInsets(top: 0,
+                                                left: 0,
+                                                bottom: 0,
+                                                right: 0)
         btn.titleLabel?.font = .boldSystemFont(ofSize: 14)
         return btn
     }()

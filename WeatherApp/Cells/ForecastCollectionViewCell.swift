@@ -82,6 +82,13 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         btn.setImage(UIImage(systemName: "chevron.down"),
                      for: .normal)
         btn.tintColor = .lightGray
+        btn.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 8)
+        btn.semanticContentAttribute = .forceLeftToRight
+        btn.contentHorizontalAlignment = .left
+        btn.titleLabel?.lineBreakMode = .byTruncatingTail
+        btn.titleLabel?.adjustsFontSizeToFitWidth = true
+        btn.titleLabel?.minimumScaleFactor = 0.7
+        btn.titleLabel?.numberOfLines = 1
         return btn
     }()
     
@@ -184,7 +191,7 @@ class ForecastCollectionViewCell: UICollectionViewCell {
             make.height.equalToSuperview()
         }
         weatherIcon.snp.makeConstraints { make in
-            make.height.width.equalTo(55)
+            make.width.equalTo(55)
         }
         stackView2.snp.makeConstraints { make in
             make.height.equalToSuperview()
