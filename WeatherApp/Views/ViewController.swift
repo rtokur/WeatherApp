@@ -19,6 +19,13 @@ class ViewController: UIViewController, SetLocation, OpenClose {
     var forecastExceptToday: [ForecastDay]?
     var selectedIndexPath: IndexPath?
     let locationManager = CLLocationManager()
+    private var forecastHeightConstraint: Constraint?
+    private var isForecastExpanded = false
+    
+    enum SnapPosition {
+        static let collapsedHeight: CGFloat = 330
+        static let expandedHeight: CGFloat = 550
+    }
     
     //MARK: UI Elements
     private let imageView: UIImageView = {
@@ -185,6 +192,7 @@ class ViewController: UIViewController, SetLocation, OpenClose {
     private let scrollView2: UIScrollView = {
         let scroll = UIScrollView()
         scroll.showsVerticalScrollIndicator = false
+        scroll.translatesAutoresizingMaskIntoConstraints = false
         return scroll
     }()
     
@@ -192,6 +200,7 @@ class ViewController: UIViewController, SetLocation, OpenClose {
         let stack = UIStackView()
         stack.axis = .vertical
         stack.spacing = 17
+        stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
     
@@ -206,7 +215,8 @@ class ViewController: UIViewController, SetLocation, OpenClose {
         let label = UILabel()
         label.text = "Hourly Forecast"
         label.textColor = .black
-        label.font = UIFont(name: "Avenir", size: 17)
+        label.font = UIFont(name: "Avenir",
+                            size: 17)
         return label
     }()
     
@@ -295,15 +305,13 @@ class ViewController: UIViewController, SetLocation, OpenClose {
         stackView.addArrangedSubview(todayCollection)
         
         view.addSubview(forecastView)
-        
-        let panGesture = UIPanGestureRecognizer(target: self,
-                                                action: #selector(handlePan(_:)))
-        forecastView.addGestureRecognizer(panGesture)
-        
         forecastView.addSubview(scrollView2)
         
         scrollView2.addSubview(stackView2)
         
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        lineImage.isUserInteractionEnabled = true
+        lineImage.addGestureRecognizer(tap)
         view.addSubview(lineImage)
         
         stackView2.addArrangedSubview(labell)
@@ -375,9 +383,9 @@ class ViewController: UIViewController, SetLocation, OpenClose {
             make.height.equalTo(130)
         }
         forecastView.snp.makeConstraints { make in
-            make.top.equalTo(stackView.snp.bottom).offset(10)
             make.width.equalToSuperview()
             make.bottom.equalToSuperview()
+            forecastHeightConstraint = make.height.equalTo(SnapPosition.collapsedHeight).constraint
         }
         scrollView2.snp.makeConstraints { make in
             make.edges.equalToSuperview().inset(20)
@@ -489,6 +497,7 @@ class ViewController: UIViewController, SetLocation, OpenClose {
                     make.height.equalTo(self.forecastCollection.collectionViewLayout.collectionViewContentSize.height)
                 }
             }
+            
         }
     }
     
@@ -530,11 +539,6 @@ class ViewController: UIViewController, SetLocation, OpenClose {
     }
     
     //MARK: Actions
-    @objc func handlePan(_ sender: UIPanGestureRecognizer){
-        
-    }
-
-    
     @objc func goToMap(_ sender: UIButton){
         let lvc = LocationVC()
         lvc.delegate = self
@@ -543,6 +547,25 @@ class ViewController: UIViewController, SetLocation, OpenClose {
         nvc.modalPresentationStyle = .fullScreen
         present(nvc, animated: true)
     }
+    
+    @objc private func handleTap() {
+        isForecastExpanded.toggle()
+        var newHeight: CGFloat
+        switch isForecastExpanded{
+        case false:
+            newHeight = SnapPosition.collapsedHeight
+            shortWeatherView.isHidden = true
+        case true:
+            newHeight = SnapPosition.expandedHeight
+            shortWeatherView.isHidden = false
+        }
+        forecastHeightConstraint?.update(offset: newHeight)
+        
+        UIView.animate(withDuration: 0.3) {
+            self.view.layoutIfNeeded()
+        }
+    }
+
 }
 
 //MARK: Delegates
@@ -732,7 +755,6 @@ extension ViewController: UICollectionViewDelegate,
                 return CGSize(width: width,
                               height: 100)
             }
-            
         }else if collectionView == todayYesterdayCollection {
             let width = collectionView.frame.width / 2
             return CGSize(width: width,
