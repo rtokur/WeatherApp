@@ -147,7 +147,7 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
         placeView.snp.makeConstraints { make in
             make.bottom.equalToSuperview()
             make.leading.trailing.equalToSuperview().inset(15)
-            make.height.equalTo(100)
+            make.height.equalToSuperview().dividedBy(8)
         }
         stackView.snp.makeConstraints { make in
             make.edges.equalToSuperview().inset(15)

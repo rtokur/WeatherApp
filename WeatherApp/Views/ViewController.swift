@@ -9,7 +9,7 @@ import UIKit
 import SnapKit
 import CoreLocation
 
-class ViewController: UIViewController, SetLocation {
+class ViewController: UIViewController, SetLocation, OpenClose {
     
     //MARK: Properties
     var weatherViewModel = WeatherViewModel()
@@ -19,7 +19,6 @@ class ViewController: UIViewController, SetLocation {
     var forecastExceptToday: [ForecastDay]?
     var selectedIndexPath: IndexPath?
     let locationManager = CLLocationManager()
-    private var top: Constraint? = nil
     
     //MARK: UI Elements
     private let imageView: UIImageView = {
@@ -104,8 +103,14 @@ class ViewController: UIViewController, SetLocation {
         btn.transform = CGAffineTransform(rotationAngle: -CGFloat.pi / 2)
         btn.semanticContentAttribute = .forceLeftToRight
         btn.contentHorizontalAlignment = .right
-        btn.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 10)
-        btn.titleEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+        btn.imageEdgeInsets = UIEdgeInsets(top: 0,
+                                           left: 0,
+                                           bottom: 0,
+                                           right: 10)
+        btn.titleEdgeInsets = UIEdgeInsets(top: 0,
+                                           left: 0,
+                                           bottom: 0,
+                                           right: 0)
         return btn
     }()
     
@@ -246,13 +251,6 @@ class ViewController: UIViewController, SetLocation {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
     }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        self.forecastCollection.snp.updateConstraints { make in
-            make.height.equalTo(self.forecastCollection.collectionViewLayout.collectionViewContentSize.height)
-        }
-    }
     
     //MARK: Setup Methods
     func setupViews(){
@@ -320,7 +318,8 @@ class ViewController: UIViewController, SetLocation {
         
         forecastCollection.delegate = self
         forecastCollection.dataSource = self
-        forecastCollection.register(ForecastCollectionViewCell.self, forCellWithReuseIdentifier: "ForecastCollectionViewCell")
+        forecastCollection.register(ForecastCollectionViewCell.self,
+                                    forCellWithReuseIdentifier: "ForecastCollectionViewCell")
         stackView2.addArrangedSubview(forecastCollection)
     }
     
@@ -366,7 +365,7 @@ class ViewController: UIViewController, SetLocation {
             make.width.equalTo(250)
             make.height.equalTo(40)
             make.centerX.equalToSuperview().multipliedBy(1.85)
-            make.top.equalTo(degreeLabel.snp.bottom).offset(20)
+            make.centerY.equalToSuperview().multipliedBy(0.45)
         }
         todayYesterdayCollection.snp.makeConstraints { make in
             make.height.equalTo(50)
@@ -376,9 +375,9 @@ class ViewController: UIViewController, SetLocation {
             make.height.equalTo(130)
         }
         forecastView.snp.makeConstraints { make in
-            top = make.top.equalTo(stackView.snp.bottom).offset(10).constraint
-            make.bottom.equalToSuperview()
+            make.top.equalTo(stackView.snp.bottom).offset(10)
             make.width.equalToSuperview()
+            make.bottom.equalToSuperview()
         }
         scrollView2.snp.makeConstraints { make in
             make.edges.equalToSuperview().inset(20)
@@ -403,7 +402,6 @@ class ViewController: UIViewController, SetLocation {
             make.height.equalTo(20)
         }
         forecastCollection.snp.makeConstraints { make in
-            make.width.equalToSuperview()
             make.height.equalTo(1)
         }
     }
@@ -431,12 +429,12 @@ class ViewController: UIViewController, SetLocation {
                 locationBtn.setTitle("\(city), \(country)",
                                      for: .normal)
                 temperatureLabel.text = "\(Int(tempC))"
-                if Int(tempC)<0 && abs(tempC) > 10{
+                if Int(tempC)<0 && abs(tempC) >= 10{
                     degreeLabel.snp.updateConstraints { make in
                         make.leading.equalTo(temperatureLabel).inset(225)
                     }
                 }
-                else if Int(tempC) < 10 && Int(tempC) > 0 {
+                else if Int(tempC) < 10 && Int(tempC) >= 0 {
                     degreeLabel.snp.updateConstraints { make in
                         make.leading.equalTo(temperatureLabel).inset(75)
                     }
@@ -487,6 +485,9 @@ class ViewController: UIViewController, SetLocation {
                 let datee = dateFormatter.string(from: Date())
                 forecastExceptToday = forecastExceptToday?.filter { $0.date != datee }
                 forecastCollection.reloadData()
+                forecastCollection.snp.updateConstraints { make in
+                    make.height.equalTo(self.forecastCollection.collectionViewLayout.collectionViewContentSize.height)
+                }
             }
         }
     }
@@ -517,62 +518,22 @@ class ViewController: UIViewController, SetLocation {
         label.layer.mask = gradiantLayer
     }
     
+    func openClose(indexPath: IndexPath){
+        if selectedIndexPath == indexPath {
+            selectedIndexPath = nil
+        }else{
+            selectedIndexPath = indexPath
+        }
+        forecastCollection.performBatchUpdates({
+            forecastCollection.reloadItems(at: [indexPath])
+        }, completion: nil)
+    }
+    
     //MARK: Actions
     @objc func handlePan(_ sender: UIPanGestureRecognizer){
-        let translation = sender.translation(in: forecastView)
-
-        if sender.state == .changed {
-            self.top?.deactivate()
-            self.forecastView.snp.makeConstraints { make in
-                make.top.equalTo(self.stackView.snp.bottom).offset(translation.y + 10)
-                make.bottom.equalToSuperview()
-                make.width.equalToSuperview()
-            }
-            sender.setTranslation(.zero, in: forecastView)
-            self.forecastView.layoutIfNeeded()
-        }
         
-        if sender.state == .ended {
-            let velocity = sender.velocity(in: forecastView).y
-            
-            UIView.animate(withDuration: 0.3,
-                           delay: 0,
-                           usingSpringWithDamping: 0.7,
-                           initialSpringVelocity: 0.5,
-                           options: .curveEaseOut) {
-                
-                if velocity < 0 {
-                    self.forecastView.snp.remakeConstraints { make in
-                        make.top.equalTo(self.degreeLabel.snp.bottom).offset(60)
-                        make.bottom.equalToSuperview()
-                        make.width.equalToSuperview()
-                    }
-                    //                    self.weatherBtn.transform = CGAffineTransform(rotationAngle: CGFloat.pi * 2)
-                    //                    self.weatherBtn.snp.updateConstraints { make in
-                    //                        make.top.equalTo(270)
-                    //                        make.leading.equalTo(225)
-                    //                    }
-                    self.shortWeatherView.isHidden = false
-                    self.tomorrowLabel.text = "Next 14 days"
-                } else {
-                    self.forecastView.snp.remakeConstraints { make in
-                        make.top.equalTo(self.stackView.snp.bottom).offset(10)
-                        make.bottom.equalToSuperview()
-                        make.width.equalToSuperview()
-                    }
-                    //                    self.weatherBtn.transform = CGAffineTransform(rotationAngle: -CGFloat.pi / 2)
-                    //                    self.weatherBtn.snp.updateConstraints { make in
-                    //                        make.top.equalTo(175)
-                    //                        make.leading.equalTo(270)
-                    //                    }
-                    self.shortWeatherView.isHidden = true
-                    self.tomorrowLabel.text = "Tomorrow"
-                }
-                
-                self.forecastView.layoutIfNeeded()
-            }
-        }
     }
+
     
     @objc func goToMap(_ sender: UIButton){
         let lvc = LocationVC()
@@ -663,7 +624,8 @@ extension ViewController: UICollectionViewDelegate,
             if let forecast = self.forecastExceptToday?[indexPath.row] {
                 cell.forecastDay = forecast
             }
-            
+            cell.delegate = self
+            cell.indexPath = indexPath
             if let max = forecastExceptToday?[indexPath.row].day?.maxtempC as? Double,
                let min = forecastExceptToday?[indexPath.row].day?.mintempC as? Double,
                let text = forecastExceptToday?[indexPath.row].day?.condition?.text as? String{

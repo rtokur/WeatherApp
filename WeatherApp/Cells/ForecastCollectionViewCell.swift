@@ -8,6 +8,9 @@
 import UIKit
 import SnapKit
 
+protocol OpenClose {
+    func openClose(indexPath: IndexPath)
+}
 
 class ForecastCollectionViewCell: UICollectionViewCell {
     //MARK: Properties
@@ -37,6 +40,8 @@ class ForecastCollectionViewCell: UICollectionViewCell {
             }
         }
     }
+    var indexPath: IndexPath? = nil
+    var delegate: OpenClose?
     
     //MARK: UI Elements
     let stackVieww: UIStackView = {
@@ -82,13 +87,17 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         btn.setImage(UIImage(systemName: "chevron.down"),
                      for: .normal)
         btn.tintColor = .lightGray
-        btn.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 8)
+        btn.imageEdgeInsets = UIEdgeInsets(top: 0,
+                                           left: 0,
+                                           bottom: 0,
+                                           right: 8)
         btn.semanticContentAttribute = .forceLeftToRight
         btn.contentHorizontalAlignment = .left
         btn.titleLabel?.lineBreakMode = .byTruncatingTail
         btn.titleLabel?.adjustsFontSizeToFitWidth = true
         btn.titleLabel?.minimumScaleFactor = 0.7
         btn.titleLabel?.numberOfLines = 1
+        btn.addTarget(self, action: #selector(openClose(_:)), for: .touchUpInside)
         return btn
     }()
     
@@ -229,6 +238,7 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         }
     }
     
+    //Functions
     func createStacks(){
         stackView4.arrangedSubviews.forEach { $0.removeFromSuperview() }
         
@@ -278,6 +288,11 @@ class ForecastCollectionViewCell: UICollectionViewCell {
             }
         }
     }
+    
+    //Actions
+    @objc func openClose(_ sender: UIButton){
+        delegate?.openClose(indexPath: indexPath!)
+    }
 }
 
 //MARK: Delegates
@@ -302,7 +317,8 @@ extension ForecastCollectionViewCell: UICollectionViewDelegate,
                         sizeForItemAt indexPath: IndexPath) -> CGSize {
         let height = collectionView.frame.height
         let width = collectionView.frame.width / 6
-        return CGSize(width: width, height: height)
+        return CGSize(width: width,
+                      height: height)
     }
     
 }
