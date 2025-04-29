@@ -10,16 +10,17 @@ import SnapKit
 import MapKit
 import CoreLocation
 
+//MARK: - Protocol
 protocol SetLocation {
     func setLocation(lan: Double,lon: Double)
 }
 
 class LocationVC: UIViewController, CLLocationManagerDelegate {
-    
+    //MARK: - Properties
     var delegate: SetLocation?
-    let locationManager = CLLocationManager()
+    private let locationManager = CLLocationManager()
     
-    //MARK: UI Elements
+    //MARK: - UI Elements
     let searchBar: UISearchBar = {
         let bar = UISearchBar()
         bar.searchTextField.textColor = .lightGray
@@ -30,6 +31,13 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
         bar.searchBarStyle = .minimal
         bar.layer.cornerRadius = 35
         bar.layer.borderColor = UIColor.lightGray.cgColor
+        bar.searchTextField.attributedPlaceholder = NSAttributedString(
+            string: "Search for location...",
+            attributes: [
+                .foregroundColor: UIColor.lightGray,
+                .font: UIFont(name: "Avenir", size: 16) ?? UIFont.systemFont(ofSize: 16)
+            ]
+        )
         bar.layer.borderWidth = 1
         bar.showsCancelButton = false
         return bar
@@ -41,7 +49,9 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
         btn.setImage(UIImage(named: "location 1")?.withRenderingMode(.alwaysOriginal),
                      for: .normal)
         btn.layer.cornerRadius = 10
-        btn.addTarget(self, action: #selector(currentLocation(_:)), for: .touchUpInside)
+        btn.addTarget(self,
+                      action: #selector(currentLocation(_:)),
+                      for: .touchUpInside)
         return btn
     }()
     
@@ -81,8 +91,25 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
         label.font = UIFont(name: "Avenir", size: 20)
         return label
     }()
-    
-    //MARK: Lifecycle
+
+    let goButton: UIButton = {
+        let btn = UIButton()
+        btn.setImage(UIImage(systemName: "arrowshape.forward.fill"),
+                     for: .normal)
+        btn.tintColor = .white
+        btn.addTarget(self,
+                      action: #selector(backButtonAction(_:)),
+                      for: .touchUpInside)
+        btn.imageView?.contentMode = .scaleAspectFit
+        btn.contentVerticalAlignment = .fill
+        btn.contentHorizontalAlignment = .fill
+        btn.imageEdgeInsets = UIEdgeInsets(top: 30,
+                                           left: 30,
+                                           bottom: 30,
+                                           right: 30)
+        return btn
+    }()
+    //MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -104,10 +131,12 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
         setupConstraints()
     }
     
-    //MARK: Setup Methods
+    //MARK: - Setup Methods
     func setupViews(){
         view.addSubview(map)
         map.delegate = self
+        let tap = UITapGestureRecognizer(target: self, action: #selector(mapTapped(_:)))
+        map.addGestureRecognizer(tap)
         view.addSubview(searchBar)
         searchBar.delegate = self
         let paddingView = UIView(frame: CGRect(x: 0,
@@ -117,13 +146,13 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
         paddingView.backgroundColor = .blue
         searchBar.searchTextField.leftView = paddingView
         searchBar.searchTextField.leftViewMode = .always
-//        searchBar.setImage(UIImage(systemName: "magnifyingglass")?.withTintColor(.white, renderingMode: .alwaysOriginal), for: .search, state: .normal)
         view.addSubview(currentBtn)
         view.addSubview(placeView)
         placeView.addSubview(stackView)
         stackView.addArrangedSubview(image)
         stackView.addArrangedSubview(locationLabel)
         locationManager.delegate = self
+        stackView.addArrangedSubview(goButton)
     }
     
     func setupConstraints(){
@@ -145,8 +174,7 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
             make.width.height.equalTo(40)
         }
         placeView.snp.makeConstraints { make in
-            make.bottom.equalToSuperview()
-            make.leading.trailing.equalToSuperview().inset(15)
+            make.leading.trailing.bottom.equalToSuperview().inset(15)
             make.height.equalToSuperview().dividedBy(8)
         }
         stackView.snp.makeConstraints { make in
@@ -158,51 +186,50 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
         locationLabel.snp.makeConstraints { make in
             make.height.equalToSuperview()
         }
+        goButton.snp.makeConstraints { make in
+            make.width.equalTo(100)
+        }
     }
     
-    //MARK: Functions
-    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        guard let location = searchBar.text else { return }
-        searchBar.resignFirstResponder()
-        findLocation(locationName: location,
-                     location: nil)
-    }
-    
-    func findLocation(locationName: String?, location: CLLocation?){
+    // MARK: - Location Finding
+    private func findLocation(locationName: String?, location: CLLocation?) {
         placeView.isHidden = false
         let geocoder = CLGeocoder()
+        
         if let locationname = locationName {
             geocoder.geocodeAddressString(locationname,
                                           in: nil,
                                           preferredLocale: Locale(identifier: "en_US")) { placemark, error in
                 guard error == nil,
                       let placemarkfirst = placemark?.first else {
-                    print(error?.localizedDescription)
+                    print(error?.localizedDescription ?? "Unknown error")
                     return
                 }
                 self.pickLocation(placemark: placemarkfirst)
             }
-        }else if let locationn = location{
+        } else if let locationn = location {
             geocoder.reverseGeocodeLocation(locationn, preferredLocale: Locale(identifier: "en_US")) { placemark, error in
                 guard error == nil,
                       let placemarkfirst = placemark?.first else {
-                    print(error?.localizedDescription)
+                    print(error?.localizedDescription ?? "Unknown error")
                     return
                 }
                 self.pickLocation(placemark: placemarkfirst)
             }
         }
     }
-    
-    func pickLocation(placemark: CLPlacemark){
+
+    // MARK: - Pick and Display Location
+    private func pickLocation(placemark: CLPlacemark) {
         if let center = (placemark.region as? CLCircularRegion)?.center,
-           let city = placemark.locality{
+           let city = placemark.locality {
+            
             let region = MKCoordinateRegion(center: center,
                                             span: MKCoordinateSpan(latitudeDelta: 0.1,
                                                                    longitudeDelta: 0.1))
-            self.map.setRegion(region,
-                               animated: true)
+            self.map.setRegion(region, animated: true)
             self.locationLabel.text = city
+            
             if let first = self.map.annotations.first {
                 self.map.removeAnnotation(first)
             }
@@ -210,20 +237,54 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
             self.addAnnotation(latitude: center.latitude,
                                longitude: center.longitude,
                                title: city)
+            
             self.delegate?.setLocation(lan: center.latitude,
                                        lon: center.longitude)
         }
     }
-    
+
+    // MARK: - Map Annotation
     func addAnnotation(latitude: Double,
                        longitude: Double,
-                       title: String){
+                       title: String) {
         let cllocation = CLLocationCoordinate2D(latitude: latitude,
                                                 longitude: longitude)
         let annotation = MKPointAnnotation()
         annotation.coordinate = cllocation
         annotation.title = title
         self.map.addAnnotation(annotation)
+    }
+    
+    //MARK: Actions
+    @objc private func backButtonAction(_ sender: UIButton){
+        dismiss(animated: true)
+    }
+    
+    @objc private func currentLocation(_ sender: UIButton){
+        locationManager.requestAlwaysAuthorization()
+        locationManager.startUpdatingLocation()
+    }
+    
+    @objc private func mapTapped(_ sender: UITapGestureRecognizer){
+        let location = sender.location(in: map)
+        let coordinate = map.convert(location,
+                                     toCoordinateFrom: map)
+        let tappedLocation = CLLocation(latitude: coordinate.latitude,
+                                        longitude: coordinate.longitude)
+        
+        findLocation(locationName: nil,
+                     location: tappedLocation)
+    }
+}
+
+//MARK: - Delegates
+extension LocationVC: UISearchBarDelegate,
+                      MKMapViewDelegate {
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        guard let location = searchBar.text else { return }
+        searchBar.resignFirstResponder()
+        findLocation(locationName: location,
+                     location: nil)
     }
     
     func locationManager(_ manager: CLLocationManager,
@@ -236,21 +297,4 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
             locationManager.stopUpdatingLocation()
         }
     }
-    
-    //MARK: Actions
-    @objc func backButtonAction(_ sender: UIButton){
-        dismiss(animated: true)
-    }
-    
-    
-    @objc func currentLocation(_ sender: UIButton){
-        locationManager.requestAlwaysAuthorization()
-        locationManager.startUpdatingLocation()
-    }
-}
-
-//MARK: Delegates
-extension LocationVC: UISearchBarDelegate,
-                      MKMapViewDelegate {
-    
 }

@@ -108,6 +108,12 @@ class Condition: Codable {
     let text: String?
     let icon: String?
     let code: Int?
+
+    var iconURL: URL? {
+        guard let icon = icon else { return nil }
+        let iconURLString = "https:"+icon
+        return URL(string: iconURLString)
+    }
 }
 
 class Forecast: Codable{

@@ -9,7 +9,7 @@ import UIKit
 import SnapKit
 
 class CollectionViewCell: UICollectionViewCell {
-    //MARK: Properties
+    //MARK: - Properties
     var hour: HourlyWeather? {
         didSet {
             guard let hourr = hour else { return }
@@ -19,14 +19,14 @@ class CollectionViewCell: UICollectionViewCell {
     }
     
     //MARK: UI Elements
-    let stackView: UIStackView = {
+    private let stackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
         stack.alignment = .center
         return stack
     }()
     
-    let hourLabel : UILabel = {
+    private let hourLabel : UILabel = {
         let label = UILabel()
         label.textColor = .lightGray
         label.font = UIFont(name: "Avenir",
@@ -35,13 +35,13 @@ class CollectionViewCell: UICollectionViewCell {
         return label
     }()
     
-    let image : UIImageView = {
+    private let image : UIImageView = {
         let image = UIImageView()
         image.contentMode = .scaleAspectFit
         return image
     }()
     
-    let chanceLabel: UILabel = {
+    private let chanceLabel: UILabel = {
         let label = UILabel()
         label.textColor = .lightGray
         label.font = UIFont(name: "Avenir",
@@ -50,7 +50,7 @@ class CollectionViewCell: UICollectionViewCell {
         return label
     }()
     
-    let degreeLabel: UILabel = {
+    private let degreeLabel: UILabel = {
         let label = UILabel()
         label.textColor = .black
         label.font = .boldSystemFont(ofSize: 13)
@@ -68,6 +68,7 @@ class CollectionViewCell: UICollectionViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
+    //MARK: - Setup Methods
     func setupViews(){
         contentView.backgroundColor = .lightgray
         contentView.addSubview(stackView)
@@ -97,25 +98,19 @@ class CollectionViewCell: UICollectionViewCell {
         }
     }
     
-    func setData(){
+    //MARK: - Set Data
+    private func setData(){
         if let time = hour?.time,
            let chance = hour?.chanceOfRain,
            let degree = hour?.tempC,
-           let text = hour?.condition?.text{
+           let url = hour?.condition?.iconURL{
             let times = time.components(separatedBy: " ")
             print(times[1],"timess")
             hourLabel.text = times[1]
             chanceLabel.text = "\(chance)%"
             degreeLabel.text = "\(Int(degree))°"
-            var text2 = text
-            if text2.hasSuffix(" "){
-                text2.remove(at: text2.index(before: text2.endIndex))
-            }
-            if text2 == "Partly cloudy"{
-                image.image = UIImage(named: "\(text2) 1")?.withRenderingMode(.alwaysOriginal)
-            }else {
-                image.image = UIImage(named: "\(text2)")?.withRenderingMode(.alwaysOriginal)
-            }
+            image.kf.setImage(with: url)
+            
         }
     }
 }

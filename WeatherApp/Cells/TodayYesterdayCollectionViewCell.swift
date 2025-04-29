@@ -10,8 +10,8 @@ import SnapKit
 
 class TodayYesterdayCollectionViewCell: UICollectionViewCell {
     
-    //MARK: UI Elements
-    let stackView: UIStackView = {
+    //MARK: - UI Elements
+    private let stackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .horizontal
         return stack
@@ -53,15 +53,15 @@ class TodayYesterdayCollectionViewCell: UICollectionViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
-    //MARK: Setup Methods
-    func setupViews(){
+    //MARK: - Setup Methods
+    private func setupViews(){
         contentView.addSubview(stackView)
         stackView.addArrangedSubview(label)
         stackView.addArrangedSubview(maxBtn)
         stackView.addArrangedSubview(minBtn)
     }
     
-    func setupConstraints(){
+    private func setupConstraints(){
         stackView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }

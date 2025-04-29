@@ -9,8 +9,8 @@ import UIKit
 import SnapKit
 
 class TodayCollectionViewCell: UICollectionViewCell {
-    //MARK: UI Elements
-    let stackView: UIStackView = {
+    //MARK: - UI Elements
+    private let stackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
         stack.alignment = .center
@@ -54,14 +54,14 @@ class TodayCollectionViewCell: UICollectionViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
-    //MARK: Setup Methods
-    func setupViews(){
+    //MARK: - Setup Methods
+    private func setupViews(){
         contentView.addSubview(stackView)
         stackView.addArrangedSubview(button)
         stackView.addArrangedSubview(label)
     }
     
-    func setupConstraints(){
+    private func setupConstraints(){
         stackView.snp.makeConstraints { make in
             make.edges.equalToSuperview().inset(25)
         }

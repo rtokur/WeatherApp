@@ -7,22 +7,22 @@
 
 import UIKit
 import SnapKit
-
+//MARK: - Protocol
 protocol OpenClose {
     func openClose(indexPath: IndexPath)
 }
 
 class ForecastCollectionViewCell: UICollectionViewCell {
-    //MARK: Properties
-    var images: [UIImage] = [UIImage(named: "umbrella")!,
+    //MARK: - Properties
+    private var images: [UIImage] = [UIImage(named: "umbrella")!,
                              UIImage(named: "drop")!,
                              UIImage(named: "wind")!,
                              UIImage(named: "uv")!]
-    var titles: [String] = ["Chance",
+    private var titles: [String] = ["Chance",
                             "Precipitation",
                             "Wind",
                             "UVI"]
-    var values: [String]?
+    private var values: [String]?
     var forecastDay: ForecastDay? {
         didSet {
             guard let forecast = forecastDay else { return }
@@ -43,15 +43,15 @@ class ForecastCollectionViewCell: UICollectionViewCell {
     var indexPath: IndexPath? = nil
     var delegate: OpenClose?
     
-    //MARK: UI Elements
-    let stackVieww: UIStackView = {
+    //MARK: - UI Elements
+    private let stackVieww: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
         stack.spacing = 20
         return stack
     }()
     
-    let stackView: UIStackView = {
+    private let stackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .horizontal
         stack.spacing = 10
@@ -65,7 +65,7 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         return image
     }()
     
-    let stackView2: UIStackView = {
+    private let stackView2: UIStackView = {
         let stackView = UIStackView()
         stackView.axis = .vertical
         return stackView
@@ -97,7 +97,9 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         btn.titleLabel?.adjustsFontSizeToFitWidth = true
         btn.titleLabel?.minimumScaleFactor = 0.7
         btn.titleLabel?.numberOfLines = 1
-        btn.addTarget(self, action: #selector(openClose(_:)), for: .touchUpInside)
+        btn.addTarget(self,
+                      action: #selector(openClose(_:)),
+                      for: .touchUpInside)
         return btn
     }()
     
@@ -132,7 +134,7 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         return view
     }()
     
-    let stackView4: UIStackView = {
+    private let stackView4: UIStackView = {
         let stack = UIStackView()
         stack.axis = .horizontal
         stack.alignment = .center
@@ -140,13 +142,13 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         return stack
     }()
     
-    let seperatorView: UIView = {
+    private let seperatorView: UIView = {
         let view = UIView()
         view.backgroundColor = .lightGray
         return view
     }()
     
-    let collection: UICollectionView = {
+    private let collection: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
         layout.minimumLineSpacing = 0
@@ -171,8 +173,8 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
-    //MARK: Setup Methods
-    func setupViews(){
+    //MARK: - Setup Methods
+    private func setupViews(){
         contentView.addSubview(stackVieww)
         stackVieww.addArrangedSubview(stackView)
         stackView.addArrangedSubview(weatherIcon)
@@ -191,7 +193,7 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         stackView3.addArrangedSubview(collection)
     }
     
-    func setupConstraints(){
+    private func setupConstraints(){
         stackVieww.snp.makeConstraints { make in
             make.top.leading.trailing.equalToSuperview().inset(22.5)
             make.height.equalTo(55)
@@ -238,8 +240,8 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         }
     }
     
-    //Functions
-    func createStacks(){
+    //MARK: - Functions
+    private func createStacks(){
         stackView4.arrangedSubviews.forEach { $0.removeFromSuperview() }
         
         for i in 0..<4{
@@ -289,8 +291,8 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         }
     }
     
-    //Actions
-    @objc func openClose(_ sender: UIButton){
+    //MARK: - Actions
+    @objc private func openClose(_ sender: UIButton){
         delegate?.openClose(indexPath: indexPath!)
     }
 }

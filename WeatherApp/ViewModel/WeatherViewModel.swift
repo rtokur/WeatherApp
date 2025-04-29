@@ -8,11 +8,11 @@
 import Foundation
 
 class WeatherViewModel {
-    //MARK: Properties
+    //MARK: - Properties
     private var baseURL = "https://api.weatherapi.com/v1"
-    private var apiKey = "11ed0746e73849fa8cf141423251503"
+    private var apiKey = "99fe3f5862b840d2ac520632252904"
     
-    //MARK: Funcstions
+    //MARK: - Functions
     func createWeather<T: Decodable>(otherUrl: String,
                                      lan: Double,
                                      lon: Double,
@@ -40,6 +40,7 @@ class WeatherViewModel {
             components.queryItems = components.queryItems.map { $0 + queryItems } ?? queryItems
         }
         var request = URLRequest(url: components.url!)
+        print(components.url!,"urlll")
         request.httpMethod = "GET"
         request.timeoutInterval = 10
         let (data, _ ) = try await URLSession.shared.data(for: request)

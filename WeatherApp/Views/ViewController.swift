@@ -8,26 +8,27 @@
 import UIKit
 import SnapKit
 import CoreLocation
+import Kingfisher
 
 class ViewController: UIViewController, SetLocation, OpenClose {
     
-    //MARK: Properties
-    var weatherViewModel = WeatherViewModel()
-    var forecastWeather: ForecastWeatherModel?
-    var historyWeather: HistoryWeatherModel?
-    var hourlyWeather: [HourlyWeather]?
-    var forecastExceptToday: [ForecastDay]?
-    var selectedIndexPath: IndexPath?
-    let locationManager = CLLocationManager()
+    //MARK: - Properties
+    private var weatherViewModel = WeatherViewModel()
+    private var forecastWeather: ForecastWeatherModel?
+    private var historyWeather: HistoryWeatherModel?
+    private var hourlyWeather: [HourlyWeather]?
+    private var forecastExceptToday: [ForecastDay]?
+    private var selectedIndexPath: IndexPath?
+    private let locationManager = CLLocationManager()
     private var forecastHeightConstraint: Constraint?
     private var isForecastExpanded = false
     
     enum SnapPosition {
-        static let collapsedHeight: CGFloat = 330
-        static let expandedHeight: CGFloat = 550
+        static let collapsedHeight: CGFloat = UIScreen.main.bounds.height / (2.4)
+        static let expandedHeight: CGFloat = UIScreen.main.bounds.height / (1.5)
     }
     
-    //MARK: UI Elements
+    //MARK: - UI Elements
     private let imageView: UIImageView = {
         let image = UIImageView()
         image.contentMode = .scaleAspectFill
@@ -103,7 +104,6 @@ class ViewController: UIViewController, SetLocation, OpenClose {
     
     private let weatherBtn: UIButton = {
         let btn = UIButton()
-        btn.backgroundColor = .clear
         btn.titleLabel?.font = .boldSystemFont(ofSize: 16)
         btn.setTitleColor(.white,
                           for: .normal)
@@ -113,11 +113,12 @@ class ViewController: UIViewController, SetLocation, OpenClose {
         btn.imageEdgeInsets = UIEdgeInsets(top: 0,
                                            left: 0,
                                            bottom: 0,
-                                           right: 10)
+                                           right: 0)
         btn.titleEdgeInsets = UIEdgeInsets(top: 0,
-                                           left: 0,
+                                           left: 10,
                                            bottom: 0,
                                            right: 0)
+        btn.imageView?.contentMode = .scaleAspectFit
         return btn
     }()
     
@@ -191,8 +192,7 @@ class ViewController: UIViewController, SetLocation, OpenClose {
     
     private let scrollView2: UIScrollView = {
         let scroll = UIScrollView()
-        scroll.showsVerticalScrollIndicator = false
-        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.isScrollEnabled = false
         return scroll
     }()
     
@@ -247,10 +247,11 @@ class ViewController: UIViewController, SetLocation, OpenClose {
                                           collectionViewLayout: layout)
         collection.showsVerticalScrollIndicator = false
         collection.backgroundColor = .white
+        collection.isScrollEnabled = true
         return collection
     }()
     
-    //MARK: Lifecycle
+    //MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -258,12 +259,12 @@ class ViewController: UIViewController, SetLocation, OpenClose {
         setupConstraints()
     }
     
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
     }
     
-    //MARK: Setup Methods
-    func setupViews(){
+    //MARK: - Setup Methods
+    private func setupViews(){
         locationManager.delegate = self
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
@@ -310,6 +311,7 @@ class ViewController: UIViewController, SetLocation, OpenClose {
         scrollView2.addSubview(stackView2)
         
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+
         lineImage.isUserInteractionEnabled = true
         lineImage.addGestureRecognizer(tap)
         view.addSubview(lineImage)
@@ -331,7 +333,7 @@ class ViewController: UIViewController, SetLocation, OpenClose {
         stackView2.addArrangedSubview(forecastCollection)
     }
     
-    func setupConstraints(){
+    private func setupConstraints(){
         imageView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
@@ -410,111 +412,176 @@ class ViewController: UIViewController, SetLocation, OpenClose {
             make.height.equalTo(20)
         }
         forecastCollection.snp.makeConstraints { make in
-            make.height.equalTo(1)
+            make.height.equalTo(SnapPosition.collapsedHeight)
         }
     }
     
-    //MARK: Functions
-    func getData(lan: Double, lon: Double){
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let yesterday = Calendar.current.date(byAdding: .day,
-                                              value: -1,
-                                              to: Date())!
-        let date = dateFormatter.string(from: yesterday)
-        Task{
+    // MARK: - Data Fetching
+
+    private func getData(lan: Double,
+                         lon: Double){
+        let date = getYesterdayDateString()
+        Task {
+            await fetchWeatherData(lan: lan, lon: lon, date: date)
+            updateUI()
+        }
+    }
+
+    private func fetchWeatherData(lan: Double,
+                                  lon: Double,
+                                  date: String) async {
+        do {
             forecastWeather = try await weatherViewModel.getForecastWeather(lan: lan,
                                                                             lon: lon)
             historyWeather = try await weatherViewModel.getHistoryWeather(lan: lan,
                                                                           lon: lon,
                                                                           dt: date)
-            if let tempC = forecastWeather?.current?.tempC as? Double,
-               let weathertext = forecastWeather?.current?.condition?.text as? String,
-               let city = forecastWeather?.location?.name as? String,
-               let country = forecastWeather?.location?.country as? String,
-               let max = forecastWeather?.forecast?.forecastday?[0].day?.maxtempC as? Double,
-               let min = forecastWeather?.forecast?.forecastday?[0].day?.mintempC as? Double{
-                locationBtn.setTitle("\(city), \(country)",
-                                     for: .normal)
-                temperatureLabel.text = "\(Int(tempC))"
-                if Int(tempC)<0 && abs(tempC) >= 10{
-                    degreeLabel.snp.updateConstraints { make in
-                        make.leading.equalTo(temperatureLabel).inset(225)
-                    }
-                }
-                else if Int(tempC) < 10 && Int(tempC) >= 0 {
-                    degreeLabel.snp.updateConstraints { make in
-                        make.leading.equalTo(temperatureLabel).inset(75)
-                    }
-                }
-                gradientLabel(label: temperatureLabel)
-                gradientLabel(label: degreeLabel)
+        } catch {
+            print("Weather info didn't get: \(error)")
+        }
+    }
 
-                weatherBtn.setTitle(weathertext,
-                                    for: .normal)
-                maxBtn.setTitle("\(Int(max))°",
-                                for: .normal)
-                minBtn.setTitle("\(Int(min))°",
-                                for: .normal)
-                var text2 = weathertext
-                if text2.hasSuffix(" "){
-                    text2.remove(at: text2.index(before: text2.endIndex))
-                }
-                if text2 == "Partly cloudy"{
-                    weatherBtn.setImage(UIImage(named: "\(text2) 1")?.withTintColor(.white,
-                                                                                          renderingMode: .alwaysOriginal),
-                                        for: .normal)
-                }else {
-                    weatherBtn.setImage(UIImage(systemName: text2)?.withTintColor(.white,
-                                                                                    renderingMode: .alwaysOriginal),
-                                        for: .normal)
-                }
-                if let hours = forecastWeather?.forecast?.forecastday?[0].hour {
-                    hourlyWeather = hours
-                }
-                let dateFormatterr = DateFormatter()
-                dateFormatterr.dateFormat = "yyyy-MM-dd HH:mm"
-                let date2 = dateFormatterr.string(from: Date())
-                hourlyWeather = hourlyWeather?.filter{ $0.time! > date2}
-                if hourlyWeather!.count < 12 {
-                    let count = 12 - (hourlyWeather!.count)
-                    if let hourr = forecastWeather?.forecast?.forecastday?[1].hour{
-                        for i in 0..<count {
-                            hourlyWeather?.append(hourr[i])
-                        }
-                    }
-                }
-                hourlyCollection.reloadData()
-                todayYesterdayCollection.reloadData()
-                todayCollection.reloadData()
-                forecastExceptToday = forecastWeather?.forecast?.forecastday
-                let dateFormatter = DateFormatter()
-                dateFormatter.dateFormat = "yyyy-MM-dd"
-                let datee = dateFormatter.string(from: Date())
-                forecastExceptToday = forecastExceptToday?.filter { $0.date != datee }
-                forecastCollection.reloadData()
-                forecastCollection.snp.updateConstraints { make in
-                    make.height.equalTo(self.forecastCollection.collectionViewLayout.collectionViewContentSize.height)
-                }
+    // MARK: - Date Helpers
+
+    private func getYesterdayDateString() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let yesterday = Calendar.current.date(byAdding: .day,
+                                              value: -1,
+                                              to: Date())!
+        return dateFormatter.string(from: yesterday)
+    }
+
+    private func getTodayDateString() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        return dateFormatter.string(from: Date())
+    }
+
+    // MARK: - UI Update
+
+    private func updateUI() {
+        guard let forecast = forecastWeather,
+              let current = forecast.current,
+              let conditionText = current.condition?.text,
+              let conditionIcon = current.condition?.iconURL,
+              let location = forecast.location,
+              let todayForecast = forecast.forecast?.forecastday?.first?.day else { return }
+
+        if let name = location.name,
+           let country = location.country {
+            updateLocationInfo(city: name,
+                               country: country)
+            updateTemperatureInfo(tempC: current.tempC,
+                                  maxTemp: todayForecast.maxtempC,
+                                  minTemp: todayForecast.mintempC)
+            updateWeatherCondition(text: conditionText, url: conditionIcon)
+            configureHourlyWeather()
+            configureForecastWeather()
+        }
+    }
+
+    // MARK: - Location Info Update
+
+    private func updateLocationInfo(city: String,
+                                    country: String) {
+        locationBtn.setTitle("\(city), \(country)",
+                             for: .normal)
+    }
+
+    // MARK: - Temperature Info Update
+
+    private func updateTemperatureInfo(tempC: Double?,
+                                       maxTemp: Double?,
+                                       minTemp: Double?) {
+        guard let tempC = tempC,
+                let max = maxTemp,
+                let min = minTemp else { return }
+        temperatureLabel.text = "\(Int(tempC))"
+        adjustDegreeLabelPosition(for: tempC)
+        gradientLabel(label: temperatureLabel)
+        gradientLabel(label: degreeLabel)
+        maxBtn.setTitle("\(Int(max))°",
+                        for: .normal)
+        minBtn.setTitle("\(Int(min))°",
+                        for: .normal)
+    }
+
+    private func adjustDegreeLabelPosition(for temperature: Double) {
+        if Int(temperature) < 0 || abs(temperature) >= 10 {
+            degreeLabel.snp.updateConstraints { make in
+                make.leading.equalTo(temperatureLabel).inset(175)
             }
-            
+        } else {
+            degreeLabel.snp.updateConstraints { make in
+                make.leading.equalTo(temperatureLabel).inset(75)
+            }
         }
     }
-    
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        if let location = locations.first {
-            let latitude = location.coordinate.latitude
-            let longitude = location.coordinate.longitude
-            getData(lan: latitude, lon: longitude)
-            locationManager.stopUpdatingLocation()
+
+    // MARK: - Weather Condition Update
+
+    private func updateWeatherCondition(text: String, url: URL) {
+        weatherBtn.setTitle(text,
+                            for: .normal)
+        weatherBtn.kf.setImage(with: url,
+                               for: .normal)
+        
+    }
+
+    // MARK: - Configure Collections
+
+    private func configureHourlyWeather() {
+        guard var hours = forecastWeather?.forecast?.forecastday?.first?.hour else { return }
+
+        let currentDateTime = Date()
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
+        let currentTimeString = dateFormatter.string(from: currentDateTime)
+
+        hourlyWeather = hours.filter { $0.time! > currentTimeString }
+
+        if let nextDayHours = forecastWeather?.forecast?.forecastday?[1].hour,
+           hourlyWeather!.count < 12 {
+            let missingCount = 12 - hourlyWeather!.count
+            for i in 0..<missingCount {
+                hourlyWeather?.append(nextDayHours[i])
+            }
         }
+
+        hourlyCollection.reloadData()
+        todayYesterdayCollection.reloadData()
+        todayCollection.reloadData()
+    }
+
+    private func configureForecastWeather() {
+        forecastExceptToday = forecastWeather?.forecast?.forecastday
+        let todayDate = getTodayDateString()
+        forecastExceptToday = forecastExceptToday?.filter { $0.date != todayDate }
+        
+        forecastCollection.reloadData()
     }
     
-    func setLocation(lan: Double, lon: Double){
-        getData(lan: lan, lon: lon)
+    // MARK: - Public Methods
+
+    func setLocation(lan: Double,
+                     lon: Double) {
+        getData(lan: lan,
+                lon: lon)
     }
-    
-    func gradientLabel(label: UILabel){
+
+    func openClose(indexPath: IndexPath) {
+        if selectedIndexPath == indexPath {
+            selectedIndexPath = nil
+        } else {
+            selectedIndexPath = indexPath
+        }
+        forecastCollection.performBatchUpdates({
+            forecastCollection.reloadItems(at: [indexPath])
+        }, completion: nil)
+    }
+
+    func gradientLabel(label: UILabel) {
         let gradiantLayer = CAGradientLayer()
         gradiantLayer.frame = label.bounds
         gradiantLayer.colors = [UIColor.white.cgColor,
@@ -523,29 +590,19 @@ class ViewController: UIViewController, SetLocation, OpenClose {
                                            y: 0.0)
         gradiantLayer.endPoint = CGPoint(x: 0.5,
                                          y: 1.0)
-        
+
         label.layer.mask = gradiantLayer
     }
     
-    func openClose(indexPath: IndexPath){
-        if selectedIndexPath == indexPath {
-            selectedIndexPath = nil
-        }else{
-            selectedIndexPath = indexPath
-        }
-        forecastCollection.performBatchUpdates({
-            forecastCollection.reloadItems(at: [indexPath])
-        }, completion: nil)
-    }
-    
-    //MARK: Actions
+    //MARK: - Actions
     @objc func goToMap(_ sender: UIButton){
         let lvc = LocationVC()
         lvc.delegate = self
         let nvc = UINavigationController(rootViewController: lvc)
         nvc.isModalInPresentation = true
         nvc.modalPresentationStyle = .fullScreen
-        present(nvc, animated: true)
+        present(nvc,
+                animated: true)
     }
     
     @objc private func handleTap() {
@@ -565,10 +622,9 @@ class ViewController: UIViewController, SetLocation, OpenClose {
             self.view.layoutIfNeeded()
         }
     }
-
 }
 
-//MARK: Delegates
+//MARK: - Delegates
 extension ViewController: UICollectionViewDelegate,
                           UICollectionViewDataSource,
                           UICollectionViewDelegateFlowLayout,
@@ -626,19 +682,12 @@ extension ViewController: UICollectionViewDelegate,
                                                           for: indexPath) as! HourlyCollectionViewCell
             if let time = hourlyWeather?[indexPath.row].time,
                let tempC = hourlyWeather?[indexPath.row].tempC,
-               let text = hourlyWeather?[indexPath.row].condition?.text{
+               let url = hourlyWeather?[indexPath.row].condition?.iconURL{
                 let timee = time.components(separatedBy: " ")
                 cell.hourLabel.text = timee[1]
                 cell.temperatureLabel.text = "\(Int(tempC))°"
-                var text2 = text
-                if text2.hasSuffix(" "){
-                    text2.remove(at: text2.index(before: text2.endIndex))
-                }
-                if text2 == "Partly cloudy"{
-                    cell.weatherImage.image = UIImage(named: "\(text2) 1")?.withRenderingMode(.alwaysOriginal)
-                }else {
-                    cell.weatherImage.image = UIImage(named: "\(text2)")?.withRenderingMode(.alwaysOriginal)
-                }
+                cell.weatherImage.kf.setImage(with: url)
+                
             }
             return cell
         }else if collectionView == forecastCollection {
@@ -651,20 +700,13 @@ extension ViewController: UICollectionViewDelegate,
             cell.indexPath = indexPath
             if let max = forecastExceptToday?[indexPath.row].day?.maxtempC as? Double,
                let min = forecastExceptToday?[indexPath.row].day?.mintempC as? Double,
-               let text = forecastExceptToday?[indexPath.row].day?.condition?.text as? String{
+               let url = forecastExceptToday?[indexPath.row].day?.condition?.iconURL as? URL{
                 cell.maxBtn.setTitle("\(Int(max))°",
                                      for: .normal)
                 cell.minBtn.setTitle("\(Int(min))°",
                                      for: .normal)
-                var text2 = text
-                if text2.hasSuffix(" "){
-                    text2.remove(at: text2.index(before: text2.endIndex))
-                }
-                if text2 == "Partly cloudy"{
-                    cell.weatherIcon.image = UIImage(named: "\(text2) 1")?.withRenderingMode(.alwaysOriginal)
-                }else {
-                    cell.weatherIcon.image = UIImage(named: "\(text2)")?.withRenderingMode(.alwaysOriginal)
-                }
+                cell.weatherIcon.kf.setImage(with: url)
+               
             }
             if indexPath.row == 0 {
                 cell.tomorrowLabel.text = "Tomorrow"
@@ -780,6 +822,15 @@ extension ViewController: UICollectionViewDelegate,
                 collectionView.reloadItems(at: [indexPath])
             }, completion: nil)
 
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if let location = locations.first {
+            let latitude = location.coordinate.latitude
+            let longitude = location.coordinate.longitude
+            getData(lan: latitude, lon: longitude)
+            locationManager.stopUpdatingLocation()
         }
     }
 }

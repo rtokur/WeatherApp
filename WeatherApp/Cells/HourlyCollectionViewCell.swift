@@ -9,8 +9,8 @@ import UIKit
 import SnapKit
 
 class HourlyCollectionViewCell: UICollectionViewCell {
-    //MARK: UI Elements
-    let stackView: UIStackView = {
+    //MARK: - UI Elements
+    private let stackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
         stack.spacing = 5
@@ -53,15 +53,15 @@ class HourlyCollectionViewCell: UICollectionViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
-    //MARK: Setup Methods
-    func setupViews(){
+    //MARK: - Setup Methods
+    private func setupViews(){
         contentView.addSubview(stackView)
         stackView.addArrangedSubview(weatherImage)
         stackView.addArrangedSubview(hourLabel)
         stackView.addArrangedSubview(temperatureLabel)
     }
     
-    func setupConstraints(){
+    private func setupConstraints(){
         stackView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
