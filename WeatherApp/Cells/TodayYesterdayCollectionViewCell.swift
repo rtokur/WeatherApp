@@ -26,20 +26,34 @@ class TodayYesterdayCollectionViewCell: UICollectionViewCell {
         return label
     }()
     
-    let maxBtn: UIButton = {
-        let btn = UIButton()
-        btn.setImage(UIImage(systemName: "arrow.up"),
-                     for: .normal)
-        btn.tintColor = .lightGray
-        return btn
+    let maxButton: UIButton = {
+        let button = UIButton()
+        button.setImage(UIImage(systemName: "arrow.up"),
+                        for: .normal)
+        var configuration = UIButton.Configuration.plain()
+        configuration.imagePlacement = .leading
+        configuration.titleAlignment = .leading
+        configuration.imagePadding = 3
+        configuration.contentInsets = .zero
+        button.contentHorizontalAlignment = .leading
+        button.configuration = configuration
+        button.tintColor = .lightGray
+        return button
     }()
     
-    let minBtn: UIButton = {
-        let btn = UIButton()
-        btn.setImage(UIImage(systemName: "arrow.down"),
-                     for: .normal)
-        btn.tintColor = .lightGray
-        return btn
+    let minButton: UIButton = {
+        let button = UIButton()
+        button.setImage(UIImage(systemName: "arrow.down"),
+                        for: .normal)
+        var configuration = UIButton.Configuration.plain()
+        configuration.imagePlacement = .leading
+        configuration.titleAlignment = .leading
+        configuration.imagePadding = 3
+        configuration.contentInsets = .zero
+        button.contentHorizontalAlignment = .leading
+        button.configuration = configuration
+        button.tintColor = .lightGray
+        return button
     }()
     
     override init(frame: CGRect) {
@@ -57,8 +71,8 @@ class TodayYesterdayCollectionViewCell: UICollectionViewCell {
     private func setupViews(){
         contentView.addSubview(stackView)
         stackView.addArrangedSubview(label)
-        stackView.addArrangedSubview(maxBtn)
-        stackView.addArrangedSubview(minBtn)
+        stackView.addArrangedSubview(maxButton)
+        stackView.addArrangedSubview(minButton)
     }
     
     private func setupConstraints(){
@@ -68,10 +82,10 @@ class TodayYesterdayCollectionViewCell: UICollectionViewCell {
         label.snp.makeConstraints { make in
             make.width.equalToSuperview().dividedBy(3)
         }
-        maxBtn.snp.makeConstraints { make in
+        maxButton.snp.makeConstraints { make in
             make.width.equalToSuperview().dividedBy(3)
         }
-        minBtn.snp.makeConstraints { make in
+        minButton.snp.makeConstraints { make in
             make.height.equalToSuperview()
         }
     }

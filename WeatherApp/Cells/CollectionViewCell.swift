@@ -74,7 +74,7 @@ class CollectionViewCell: UICollectionViewCell {
         contentView.addSubview(stackView)
         stackView.addArrangedSubview(hourLabel)
         stackView.addArrangedSubview(image)
-
+        
         stackView.addArrangedSubview(chanceLabel)
         stackView.addArrangedSubview(degreeLabel)
     }
@@ -105,7 +105,6 @@ class CollectionViewCell: UICollectionViewCell {
            let degree = hour?.tempC,
            let url = hour?.condition?.iconURL{
             let times = time.components(separatedBy: " ")
-            print(times[1],"timess")
             hourLabel.text = times[1]
             chanceLabel.text = "\(chance)%"
             degreeLabel.text = "\(Int(degree))°"

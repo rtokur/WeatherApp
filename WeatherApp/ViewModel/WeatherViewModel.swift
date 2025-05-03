@@ -7,7 +7,8 @@
 
 import Foundation
 
-class WeatherViewModel {
+class WeatherViewModel{
+    
     //MARK: - Properties
     private var baseURL = "https://api.weatherapi.com/v1"
     private var apiKey = "99fe3f5862b840d2ac520632252904"
@@ -40,7 +41,6 @@ class WeatherViewModel {
             components.queryItems = components.queryItems.map { $0 + queryItems } ?? queryItems
         }
         var request = URLRequest(url: components.url!)
-        print(components.url!,"urlll")
         request.httpMethod = "GET"
         request.timeoutInterval = 10
         let (data, _ ) = try await URLSession.shared.data(for: request)

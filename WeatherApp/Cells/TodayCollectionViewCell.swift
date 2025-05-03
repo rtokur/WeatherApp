@@ -18,18 +18,18 @@ class TodayCollectionViewCell: UICollectionViewCell {
     }()
     
     let button: UIButton = {
-        let btn = UIButton()
-        btn.tintColor = .white
-        btn.titleEdgeInsets.left = 10
-        btn.imageEdgeInsets.right = 10
-        btn.contentHorizontalAlignment = .leading
-        btn.titleLabel?.lineBreakMode = .byTruncatingTail
-        btn.contentEdgeInsets = UIEdgeInsets(top: 0,
-                                                left: 0,
-                                                bottom: 0,
-                                                right: 0)
-        btn.titleLabel?.font = .boldSystemFont(ofSize: 14)
-        return btn
+        let button = UIButton()
+        button.tintColor = .white
+        var configuration = UIButton.Configuration.plain()
+        configuration.imagePlacement = .leading
+        configuration.titleAlignment = .leading
+        configuration.imagePadding = 6
+        configuration.contentInsets = .zero
+        button.contentHorizontalAlignment = .leading
+        button.configuration = configuration
+        button.contentHorizontalAlignment = .leading
+        button.titleLabel?.lineBreakMode = .byTruncatingTail
+        return button
     }()
     
     let label: UILabel = {

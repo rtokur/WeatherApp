@@ -15,7 +15,7 @@ protocol SetLocation {
     func setLocation(lan: Double,lon: Double)
 }
 
-class LocationVC: UIViewController, CLLocationManagerDelegate {
+class LocationViewController: UIViewController, CLLocationManagerDelegate {
     //MARK: - Properties
     var delegate: SetLocation?
     private let locationManager = CLLocationManager()
@@ -43,16 +43,16 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
         return bar
     }()
     
-    let currentBtn: UIButton = {
-        let btn = UIButton()
-        btn.backgroundColor = .white
-        btn.setImage(UIImage(named: "location 1")?.withRenderingMode(.alwaysOriginal),
-                     for: .normal)
-        btn.layer.cornerRadius = 10
-        btn.addTarget(self,
-                      action: #selector(currentLocation(_:)),
-                      for: .touchUpInside)
-        return btn
+    let currentButton: UIButton = {
+        let button = UIButton()
+        button.backgroundColor = .white
+        button.setImage(UIImage(named: "location 1")?.withRenderingMode(.alwaysOriginal),
+                        for: .normal)
+        button.layer.cornerRadius = 10
+        button.addTarget(self,
+                         action: #selector(currentLocation),
+                         for: .touchUpInside)
+        return button
     }()
     
     let map: MKMapView = {
@@ -91,34 +91,30 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
         label.font = UIFont(name: "Avenir", size: 20)
         return label
     }()
-
+    
     let goButton: UIButton = {
-        let btn = UIButton()
-        btn.setImage(UIImage(systemName: "arrowshape.forward.fill"),
-                     for: .normal)
-        btn.tintColor = .white
-        btn.addTarget(self,
-                      action: #selector(backButtonAction(_:)),
-                      for: .touchUpInside)
-        btn.imageView?.contentMode = .scaleAspectFit
-        btn.contentVerticalAlignment = .fill
-        btn.contentHorizontalAlignment = .fill
-        btn.imageEdgeInsets = UIEdgeInsets(top: 30,
-                                           left: 30,
-                                           bottom: 30,
-                                           right: 30)
-        return btn
+        let button = UIButton()
+        button.setImage(UIImage(systemName: "arrowshape.forward.fill"),
+                        for: .normal)
+        button.tintColor = .white
+        button.addTarget(self,
+                         action: #selector(backButtonAction),
+                         for: .touchUpInside)
+        button.imageView?.contentMode = .scaleAspectFit
+        var config = UIButton.Configuration.plain()
+        config.imagePlacement = .trailing
+        return button
     }()
     //MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
         navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "chevron.backward")?
             .withTintColor(.white,
                            renderingMode: .alwaysOriginal),
                                                            style: .done,
                                                            target: self,
-                                                           action: #selector(backButtonAction(_:)))
+                                                           action: #selector(backButtonAction))
         let label = UILabel()
         label.text = "Search For City"
         label.textColor = .white
@@ -146,7 +142,7 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
         paddingView.backgroundColor = .blue
         searchBar.searchTextField.leftView = paddingView
         searchBar.searchTextField.leftViewMode = .always
-        view.addSubview(currentBtn)
+        view.addSubview(currentButton)
         view.addSubview(placeView)
         placeView.addSubview(stackView)
         stackView.addArrangedSubview(image)
@@ -168,7 +164,7 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
         searchBar.searchTextField.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
-        currentBtn.snp.makeConstraints { make in
+        currentButton.snp.makeConstraints { make in
             make.trailing.equalToSuperview().inset(15)
             make.top.equalToSuperview().inset(230)
             make.width.height.equalTo(40)
@@ -218,7 +214,7 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
             }
         }
     }
-
+    
     // MARK: - Pick and Display Location
     private func pickLocation(placemark: CLPlacemark) {
         if let center = (placemark.region as? CLCircularRegion)?.center,
@@ -242,7 +238,7 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
                                        lon: center.longitude)
         }
     }
-
+    
     // MARK: - Map Annotation
     func addAnnotation(latitude: Double,
                        longitude: Double,
@@ -278,8 +274,8 @@ class LocationVC: UIViewController, CLLocationManagerDelegate {
 }
 
 //MARK: - Delegates
-extension LocationVC: UISearchBarDelegate,
-                      MKMapViewDelegate {
+extension LocationViewController: UISearchBarDelegate,
+                                  MKMapViewDelegate {
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         guard let location = searchBar.text else { return }
         searchBar.resignFirstResponder()
@@ -290,8 +286,6 @@ extension LocationVC: UISearchBarDelegate,
     func locationManager(_ manager: CLLocationManager,
                          didUpdateLocations locations: [CLLocation]) {
         if let location = locations.first {
-            let latitude = location.coordinate.latitude
-            let longitude = location.coordinate.longitude
             findLocation(locationName: nil,
                          location: location)
             locationManager.stopUpdatingLocation()

@@ -15,13 +15,13 @@ protocol OpenClose {
 class ForecastCollectionViewCell: UICollectionViewCell {
     //MARK: - Properties
     private var images: [UIImage] = [UIImage(named: "umbrella")!,
-                             UIImage(named: "drop")!,
-                             UIImage(named: "wind")!,
-                             UIImage(named: "uv")!]
+                                     UIImage(named: "drop")!,
+                                     UIImage(named: "wind")!,
+                                     UIImage(named: "uv")!]
     private var titles: [String] = ["Chance",
-                            "Precipitation",
-                            "Wind",
-                            "UVI"]
+                                    "Precipitation",
+                                    "Wind",
+                                    "UVI"]
     private var values: [String]?
     var forecastDay: ForecastDay? {
         didSet {
@@ -30,10 +30,10 @@ class ForecastCollectionViewCell: UICollectionViewCell {
                let precipitation = forecast.day?.totalprecipMm ,
                let wind = forecast.day?.maxwindKph ,
                let uvi = forecast.day?.uv{
-                   values = ["\(chance)%",
-                             "\(precipitation)mm",
-                             "\(Int(wind))km/h",
-                             "\(Int(uvi))",]
+                values = ["\(chance)%",
+                          "\(precipitation)mm",
+                          "\(Int(wind))km/h",
+                          "\(Int(uvi))",]
                 createStacks()
                 self.forecastDay = forecast
                 collection.reloadData()
@@ -78,53 +78,47 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         return label
     }()
     
-    let weatherBtn: UIButton = {
-        let btn = UIButton()
-        btn.setTitleColor(.lightGray,
-                          for: .normal)
-        btn.titleLabel?.font = UIFont(name: "Avenir",
-                                      size: 12)
-        btn.setImage(UIImage(systemName: "chevron.down"),
-                     for: .normal)
-        btn.tintColor = .lightGray
-        btn.imageEdgeInsets = UIEdgeInsets(top: 0,
-                                           left: 0,
-                                           bottom: 0,
-                                           right: 8)
-        btn.semanticContentAttribute = .forceLeftToRight
-        btn.contentHorizontalAlignment = .left
-        btn.titleLabel?.lineBreakMode = .byTruncatingTail
-        btn.titleLabel?.adjustsFontSizeToFitWidth = true
-        btn.titleLabel?.minimumScaleFactor = 0.7
-        btn.titleLabel?.numberOfLines = 1
-        btn.addTarget(self,
-                      action: #selector(openClose(_:)),
-                      for: .touchUpInside)
-        return btn
+    let weatherButton: UIButton = {
+        let button = UIButton()
+        button.setTitleColor(.lightGray,
+                             for: .normal)
+        button.setImage(UIImage(systemName: "chevron.down"),
+                        for: .normal)
+        button.tintColor = .lightGray
+        var configuration = UIButton.Configuration.plain()
+        configuration.imagePlacement = .leading
+        configuration.titleAlignment = .leading
+        configuration.contentInsets = .zero
+        button.contentHorizontalAlignment = .leading
+        button.configuration = configuration
+        button.addTarget(self,
+                         action: #selector(openClose),
+                         for: .touchUpInside)
+        return button
     }()
     
-    let maxBtn: UIButton = {
-        let btn = UIButton()
-        btn.setTitleColor(.black,
-                          for: .normal)
-        btn.setImage(UIImage(systemName: "arrow.up"),
-                     for: .normal)
-        btn.tintColor = .lightGray
-        btn.titleLabel?.font = UIFont(name: "Avenir",
-                                      size: 13)
-        return btn
+    let maxButton: UIButton = {
+        let button = UIButton()
+        button.setTitleColor(.black,
+                             for: .normal)
+        button.setImage(UIImage(systemName: "arrow.up"),
+                        for: .normal)
+        button.tintColor = .lightGray
+        button.titleLabel?.font = UIFont(name: "Avenir",
+                                         size: 13)
+        return button
     }()
     
-    let minBtn: UIButton = {
-        let btn = UIButton()
-        btn.setTitleColor(.black,
-                          for: .normal)
-        btn.setImage(UIImage(systemName: "arrow.down"),
-                     for: .normal)
-        btn.titleLabel?.font = UIFont(name: "Avenir",
-                                      size: 13)
-        btn.tintColor = .lightGray
-        return btn
+    let minButton: UIButton = {
+        let button = UIButton()
+        button.setTitleColor(.black,
+                             for: .normal)
+        button.setImage(UIImage(systemName: "arrow.down"),
+                        for: .normal)
+        button.titleLabel?.font = UIFont(name: "Avenir",
+                                         size: 13)
+        button.tintColor = .lightGray
+        return button
     }()
     
     let stackView3: UIStackView = {
@@ -161,7 +155,7 @@ class ForecastCollectionViewCell: UICollectionViewCell {
     
     override init(frame: CGRect) {
         super.init(frame: frame)
-
+        
         contentView.layer.cornerRadius = 20
         contentView.layer.borderWidth = 2
         contentView.layer.borderColor = UIColor.lightgray.cgColor
@@ -180,9 +174,9 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         stackView.addArrangedSubview(weatherIcon)
         stackView.addArrangedSubview(stackView2)
         stackView2.addArrangedSubview(tomorrowLabel)
-        stackView2.addArrangedSubview(weatherBtn)
-        contentView.addSubview(maxBtn)
-        contentView.addSubview(minBtn)
+        stackView2.addArrangedSubview(weatherButton)
+        contentView.addSubview(maxButton)
+        contentView.addSubview(minButton)
         contentView.addSubview(stackView3)
         stackView3.addArrangedSubview(stackView4)
         stackView3.addArrangedSubview(seperatorView)
@@ -210,15 +204,15 @@ class ForecastCollectionViewCell: UICollectionViewCell {
         tomorrowLabel.snp.makeConstraints { make in
             make.height.equalTo(30)
         }
-        weatherBtn.snp.makeConstraints { make in
+        weatherButton.snp.makeConstraints { make in
             make.height.equalTo(25)
         }
-        maxBtn.snp.makeConstraints { make in
+        maxButton.snp.makeConstraints { make in
             make.top.equalToSuperview().inset(22.5)
             make.height.width.equalTo(45)
             make.trailing.equalToSuperview().inset(77.5)
         }
-        minBtn.snp.makeConstraints { make in
+        minButton.snp.makeConstraints { make in
             make.top.trailing.equalToSuperview().inset(22.5)
             make.height.width.equalTo(45)
         }
