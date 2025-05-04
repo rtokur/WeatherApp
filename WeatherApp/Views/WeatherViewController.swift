@@ -407,7 +407,9 @@ class WeatherViewController: UIViewController, SetLocation, OpenClose{
                          lon: Double){
         let date = getYesterdayDateString()
         Task {
-            await fetchWeatherData(lan: lan, lon: lon, date: date)
+            await fetchWeatherData(lan: lan,
+                                   lon: lon,
+                                   date: date)
             updateUI()
         }
     }
@@ -460,7 +462,8 @@ class WeatherViewController: UIViewController, SetLocation, OpenClose{
             updateTemperatureInfo(tempC: current.tempC,
                                   maxTemp: todayForecast.maxtempC,
                                   minTemp: todayForecast.mintempC)
-            updateWeatherCondition(text: conditionText, url: conditionIcon)
+            updateWeatherCondition(text: conditionText,
+                                   url: conditionIcon)
             configureHourlyWeather()
             configureForecastWeather()
         }
@@ -486,9 +489,12 @@ class WeatherViewController: UIViewController, SetLocation, OpenClose{
         adjustDegreeLabelPosition(for: tempC)
         gradientLabel(label: temperatureLabel)
         gradientLabel(label: degreeLabel)
-        let attributes : [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 13), .foregroundColor: UIColor.white]
-        maxButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(max))°", attributes: attributes))
-        minButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(min))°", attributes: attributes))
+        let attributes : [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 13),
+                                                          .foregroundColor: UIColor.white]
+        maxButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(max))°",
+                                                                                       attributes: attributes))
+        minButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(min))°",
+                                                                                       attributes: attributes))
     }
     
     private func adjustDegreeLabelPosition(for temperature: Double) {
@@ -506,8 +512,10 @@ class WeatherViewController: UIViewController, SetLocation, OpenClose{
     // MARK: - Weather Condition Update
     
     private func updateWeatherCondition(text: String, url: URL) {
-        let attributes: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 16), .foregroundColor: UIColor.white]
-        weatherButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: text, attributes: attributes))
+        let attributes: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 16),
+                                                         .foregroundColor: UIColor.white]
+        weatherButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: text,
+                                                                                           attributes: attributes))
         weatherButton.kf.setImage(with: url,
                                   for: .normal)
         
@@ -546,6 +554,17 @@ class WeatherViewController: UIViewController, SetLocation, OpenClose{
         forecastCollection.reloadData()
     }
     
+    private func attributedTextStyle() -> [NSAttributedString.Key: Any] {
+        return [.font: UIFont.boldSystemFont(ofSize: 14),
+            .foregroundColor: UIColor.white]
+    }
+    
+    private func addSeparator(to cell: UICollectionViewCell, topPadding: CGFloat){
+        let seperator = CALayer()
+        seperator.backgroundColor = UIColor.lightGray.cgColor
+        seperator.frame = CGRect(x: cell.bounds.width - 1, y: topPadding, width: 1, height: cell.bounds.height - 2 * topPadding )
+        cell.layer.addSublayer(seperator)
+    }
     // MARK: - Public Methods
     
     func setLocation(lan: Double,
@@ -628,141 +647,120 @@ extension WeatherViewController: UICollectionViewDelegate,
     
     func collectionView(_ collectionView: UICollectionView,
                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        
         if collectionView == todayYesterdayCollection {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "TodayYesterdayCollectionViewCell",
                                                           for: indexPath) as! TodayYesterdayCollectionViewCell
-            if let max = forecastWeather?.forecast?.forecastday?[0].day?.maxtempC as? Double,
-               let min = forecastWeather?.forecast?.forecastday?[0].day?.mintempC as? Double{
-                let maxInt = Int(max)
-                let minInt = Int(min)
-                let attributes: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 14),
-                                                                 .foregroundColor: UIColor.white]
-                cell.maxButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(maxInt)°",
-                                                                                                    attributes: attributes))
-                cell.minButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(minInt)°",
-                                                                                                    attributes: attributes))
-                if indexPath.row == 0 {
-                    cell.label.text = "Today"
-                    let separatorLayer = CALayer()
-                    separatorLayer.backgroundColor = UIColor.lightGray.cgColor
-                    separatorLayer.frame = CGRect(x: cell.bounds.width - 1,
-                                                  y: 15,
-                                                  width: 1,
-                                                  height: cell.bounds.height - 30)
-                    
-                    cell.layer.addSublayer(separatorLayer)
-                }else if indexPath.row == 1{
-                    cell.label.text = "Yesterday"
-                }
+            
+            guard let max = forecastWeather?.forecast?.forecastday?[0].day?.maxtempC,
+                  let min = forecastWeather?.forecast?.forecastday?[0].day?.mintempC else {
+                return cell
             }
+            
+            let attributes = attributedTextStyle()
+            cell.maxButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(max))°",
+                                                                                                attributes: attributes))
+            cell.minButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(min))°",
+                                                                                                attributes: attributes))
+            
+            if indexPath.row == 0 {
+                cell.label.text = "Today"
+                addSeparator(to: cell,
+                             topPadding: 15)
+            } else if indexPath.row == 1 {
+                cell.label.text = "Yesterday"
+            }
+            
             return cell
-        }else if collectionView == hourlyCollection {
+            
+        } else if collectionView == hourlyCollection {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "HourlyCollectionViewCell",
                                                           for: indexPath) as! HourlyCollectionViewCell
-            if let time = hourlyWeather?[indexPath.row].time,
-               let tempC = hourlyWeather?[indexPath.row].tempC,
-               let url = hourlyWeather?[indexPath.row].condition?.iconURL{
-                let timee = time.components(separatedBy: " ")
-                cell.hourLabel.text = timee[1]
+            
+            if let hourly = hourlyWeather?[indexPath.row],
+               let time = hourly.time,
+               let tempC = hourly.tempC,
+               let url = hourly.condition?.iconURL {
+                
+                let hourText = time.components(separatedBy: " ").last ?? time
+                cell.hourLabel.text = hourText
                 cell.temperatureLabel.text = "\(Int(tempC))°"
                 cell.weatherImage.kf.setImage(with: url)
-                
             }
             return cell
-        }else if collectionView == forecastCollection {
+            
+        } else if collectionView == forecastCollection {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "ForecastCollectionViewCell",
                                                           for: indexPath) as! ForecastCollectionViewCell
-            if let forecast = self.forecastExceptToday?[indexPath.row] {
+            
+            if let forecast = forecastExceptToday?[indexPath.row] {
                 cell.forecastDay = forecast
-            }
-            cell.delegate = self
-            cell.indexPath = indexPath
-            if let max = forecastExceptToday?[indexPath.row].day?.maxtempC as? Double,
-               let min = forecastExceptToday?[indexPath.row].day?.mintempC as? Double,
-               let url = forecastExceptToday?[indexPath.row].day?.condition?.iconURL as? URL{
-                cell.maxButton.setTitle("\(Int(max))°",
-                                        for: .normal)
-                cell.minButton.setTitle("\(Int(min))°",
-                                        for: .normal)
-                cell.weatherIcon.kf.setImage(with: url)
+                cell.delegate = self
+                cell.indexPath = indexPath
                 
-            }
-            if indexPath.row == 0 {
-                cell.tomorrowLabel.text = "Tomorrow"
-            } else {
-                if let date = forecastExceptToday?[indexPath.row].date as? String {
-                    let date2 = DateFormatter()
-                    date2.dateFormat = "yyyy-MM-dd"
-                    let datee = date2.date(from: date)!
-                    let dateFormat = DateFormatter()
-                    dateFormat.dateFormat = "EEEE, dd MMM"
-                    let date3 = dateFormat.string(from: datee)
-                    cell.tomorrowLabel.text = "\(date3)"
+                if let max = forecast.day?.maxtempC,
+                   let min = forecast.day?.mintempC,
+                   let url = forecast.day?.condition?.iconURL {
+                    
+                    cell.maxButton.setTitle("\(Int(max))°",
+                                            for: .normal)
+                    cell.minButton.setTitle("\(Int(min))°",
+                                            for: .normal)
+                    cell.weatherIcon.kf.setImage(with: url)
                 }
-            }
-            if let text = forecastExceptToday?[indexPath.row].day?.condition?.text as? String {
-                let attributes : [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 12), .foregroundColor: UIColor.lightGray]
-                cell.weatherButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: text, attributes: attributes))
-            }
-            if selectedIndexPath == indexPath {
-                cell.stackView3.isHidden = false
-            }else{
-                cell.stackView3.isHidden = true
+                
+                if indexPath.row == 0 {
+                    cell.tomorrowLabel.text = "Tomorrow"
+                } else if let dateStr = forecast.date {
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyy-MM-dd"
+                    if let date = formatter.date(from: dateStr) {
+                        formatter.dateFormat = "EEEE, dd MMM"
+                        cell.tomorrowLabel.text = formatter.string(from: date)
+                    }
+                }
+                
+                if let text = forecast.day?.condition?.text {
+                    let attr = [NSAttributedString.Key.font: UIFont.systemFont(ofSize: 12), .foregroundColor: UIColor.lightGray]
+                    cell.weatherButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: text, attributes: attr))
+                }
+                
+                cell.stackView3.isHidden = (selectedIndexPath != indexPath)
             }
             return cell
         }
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "TodayCollectionViewCell",
-                                                      for: indexPath) as! TodayCollectionViewCell
-        let attributes: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 13),
-                                                         .foregroundColor: UIColor.white]
+
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "TodayCollectionViewCell", for: indexPath) as! TodayCollectionViewCell
+        let attributes = attributedTextStyle()
+        
         switch indexPath.row {
         case 0:
-            if let chanceOfRain = forecastWeather?.forecast?.forecastday?[0].day?.dailyChanceOfRain as? Int{
+            if let rainChance = forecastWeather?.forecast?.forecastday?[0].day?.dailyChanceOfRain {
                 cell.label.text = "Slight chance of rain"
-                cell.button.setImage(UIImage(named: "raindrop")?.withRenderingMode(.alwaysOriginal),
-                                     for: .normal)
-                cell.button.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(chanceOfRain) %",
-                                                                                                 attributes: attributes))
-                
-                let separatorLayer = CALayer()
-                separatorLayer.backgroundColor = UIColor.lightGray.cgColor
-                separatorLayer.frame = CGRect(x: cell.bounds.width - 1,
-                                              y: 45,
-                                              width: 1,
-                                              height: cell.bounds.height - 90)
-                
-                cell.layer.addSublayer(separatorLayer)
+                cell.button.setImage(UIImage(named: "drop")?.withRenderingMode(.alwaysOriginal), for: .normal)
+                cell.button.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(rainChance) %", attributes: attributes))
+                addSeparator(to: cell, topPadding: 45)
             }
         case 1:
-            if let wind = forecastWeather?.current?.windKph as? Double{
+            if let wind = forecastWeather?.current?.windKph {
                 cell.label.text = "Gentle breeze now"
-                cell.button.setImage(UIImage(systemName: "arrow.up.right"),
-                                     for: .normal)
-                cell.button.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(wind)) km/h",
-                                                                                                 attributes: attributes))
-                let separatorLayer = CALayer()
-                separatorLayer.backgroundColor = UIColor.lightGray.cgColor
-                separatorLayer.frame = CGRect(x: cell.bounds.width - 1,
-                                              y: 45,
-                                              width: 1,
-                                              height: cell.bounds.height - 90)
-                
-                cell.layer.addSublayer(separatorLayer)
+                cell.button.setImage(UIImage(systemName: "arrow.up.right"), for: .normal)
+                cell.button.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(wind)) km/h", attributes: attributes))
+                addSeparator(to: cell, topPadding: 45)
             }
         case 2:
-            if let uv = forecastWeather?.current?.uv as? Double{
+            if let uv = forecastWeather?.current?.uv {
                 cell.label.text = "Low sunburn risk today"
-                cell.button.setImage(UIImage(systemName: "sun.min.fill")?.withTintColor(.systemYellow,
-                                                                                        renderingMode: .alwaysOriginal),
-                                     for: .normal)
-                cell.button.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "UVI \(Int(uv))",
-                                                                                                 attributes: attributes))
+                cell.button.setImage(UIImage(systemName: "sun.min.fill")?.withTintColor(.systemYellow, renderingMode: .alwaysOriginal), for: .normal)
+                cell.button.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "UVI \(Int(uv))", attributes: attributes))
             }
         default:
             break
         }
+        
         return cell
     }
+
     
     func collectionView(_ collectionView: UICollectionView,
                         layout collectionViewLayout: UICollectionViewLayout,
