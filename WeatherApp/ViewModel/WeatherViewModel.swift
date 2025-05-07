@@ -8,63 +8,84 @@
 import Foundation
 
 class WeatherViewModel{
-    
+
     //MARK: - Properties
-    private var baseURL = "https://api.weatherapi.com/v1"
-    private var apiKey = "99fe3f5862b840d2ac520632252904"
+    private let weatherService = WeatherService()
+    
+    var forecastWeather: ForecastWeatherModel?
+    var historyWeather: HistoryWeatherModel?
+    
+    var onDataUpdated: (() -> Void)?
+    var onError: ((Error) -> Void)?
     
     //MARK: - Functions
-    func createWeather<T: Decodable>(otherUrl: String,
-                                     lan: Double,
-                                     lon: Double,
-                                     days: String?,
-                                     dt: String?) async throws -> T{
-        let url = URL(string: baseURL + otherUrl)!
-        var components = URLComponents(url: url,
-                                       resolvingAgainstBaseURL: true)!
-        let queryItems : [URLQueryItem]
-        if days != nil {
-            queryItems = [URLQueryItem(name: "key",
-                                       value: apiKey),
-                          URLQueryItem(name: "q",
-                                       value: "\(lan),\(lon)"),
-                          URLQueryItem(name: "days",
-                                       value: days)]
-            components.queryItems = components.queryItems.map { $0 + queryItems } ?? queryItems
-        }else if dt != nil {
-            queryItems = [URLQueryItem(name: "key",
-                                       value: apiKey),
-                          URLQueryItem(name: "q",
-                                       value: "\(lan),\(lon)"),
-                          URLQueryItem(name: "dt",
-                                       value: dt)]
-            components.queryItems = components.queryItems.map { $0 + queryItems } ?? queryItems
+    func getForecastWeather(lan: Double, lon: Double){
+        weatherService.getForecastWeather(lan: lan, lon: lon) { [weak self] result in
+            if let self = self{
+                switch result{
+                case .success(let forecast):
+                    self.forecastWeather = forecast
+                    DispatchQueue.main.async {
+                        self.onDataUpdated?()
+                    }
+                case.failure(let failure):
+                    DispatchQueue.main.async {
+                        self.onError?(failure)
+                    }
+                }
+            }
+            
         }
-        var request = URLRequest(url: components.url!)
-        request.httpMethod = "GET"
-        request.timeoutInterval = 10
-        let (data, _ ) = try await URLSession.shared.data(for: request)
-        let response = try JSONDecoder().decode(T.self,
-                                                from: data)
-        return response
     }
     
-    func getForecastWeather(lan: Double,
-                            lon: Double) async throws -> ForecastWeatherModel {
-        return try await createWeather(otherUrl: "/forecast.json",
-                                       lan: lan,
-                                       lon: lon,
-                                       days: "15",
-                                       dt: nil)
+    func getHistoryWeather(lan: Double, lon: Double, dt: String){
+        weatherService.getHistoryWeather(lan: lan, lon: lon, dt: dt) { [weak self] result in
+            if let self = self {
+                switch result {
+                case .success(let history):
+                    self.historyWeather = history
+                    DispatchQueue.main.async {
+                        self.onDataUpdated?()
+                    }
+                case .failure(let failure):
+                    DispatchQueue.main.async {
+                        self.onError?(failure)
+                    }
+                }
+            }
+        }
     }
     
-    func getHistoryWeather(lan: Double,
-                           lon: Double,
-                           dt: String) async throws -> HistoryWeatherModel {
-        return try await createWeather(otherUrl: "/history.json",
-                                       lan: lan,
-                                       lon: lon,
-                                       days: nil,
-                                       dt: dt)
+    func forecast(at index: Int) -> ForecastDay? {
+        return forecastWeather?.forecast?.forecastday?[index]
+    }
+    
+    func history(at index: Int) -> ForecastDay? {
+        return historyWeather?.forecast?.forecastday?[index]
+    }
+    
+    func hourlyWeatherData() -> [HourlyWeather]? {
+        guard let hours = forecastWeather?.forecast?.forecastday?.first?.hour else { return [] }
+
+        var hourss = hours.filter { $0.time! > currentDate() }
+        
+        if let nextDayHours = forecastWeather?.forecast?.forecastday?[1].hour,
+           hourss.count < 12 {
+            let missingCount = 12 - hourss.count
+            for i in 0..<missingCount {
+                hourss.append(nextDayHours[i])
+            }
+        }
+        return hourss
+    }
+    
+    func forecastExceptToday() -> [ForecastDay]? {
+        return forecastWeather?.forecast?.forecastday?.filter { $0.date != currentDate()}
+    }
+    
+    func currentDate() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return dateFormatter.string(from: Date())
     }
 }

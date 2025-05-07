@@ -12,13 +12,8 @@ import Kingfisher
 
 class WeatherViewController: UIViewController, SetLocation, OpenClose{
     
-    
     //MARK: - Properties
     private var weatherViewModel = WeatherViewModel()
-    private var forecastWeather: ForecastWeatherModel?
-    private var historyWeather: HistoryWeatherModel?
-    private var hourlyWeather: [HourlyWeather]?
-    private var forecastExceptToday: [ForecastDay]?
     private var selectedIndexPath: IndexPath?
     private let locationManager = CLLocationManager()
     private var forecastHeightConstraint: Constraint?
@@ -242,6 +237,16 @@ class WeatherViewController: UIViewController, SetLocation, OpenClose{
         
         setupViews()
         setupConstraints()
+        
+        weatherViewModel.onDataUpdated = { [weak self] in
+            if let self = self {
+                self.updateUI()
+            }
+        }
+        
+        weatherViewModel.onError = { error in
+            print(error)
+        }
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -406,26 +411,12 @@ class WeatherViewController: UIViewController, SetLocation, OpenClose{
     private func getData(lan: Double,
                          lon: Double){
         let date = getYesterdayDateString()
-        Task {
-            await fetchWeatherData(lan: lan,
-                                   lon: lon,
-                                   date: date)
-            updateUI()
-        }
-    }
-    
-    private func fetchWeatherData(lan: Double,
-                                  lon: Double,
-                                  date: String) async {
-        do {
-            forecastWeather = try await weatherViewModel.getForecastWeather(lan: lan,
-                                                                            lon: lon)
-            historyWeather = try await weatherViewModel.getHistoryWeather(lan: lan,
-                                                                          lon: lon,
-                                                                          dt: date)
-        } catch {
-            print("Weather info didn't get: \(error)")
-        }
+        
+        weatherViewModel.getForecastWeather(lan: lan,
+                                            lon: lon)
+        weatherViewModel.getHistoryWeather(lan: lan,
+                                           lon: lon,
+                                           dt: date)
     }
     
     // MARK: - Date Helpers
@@ -448,7 +439,7 @@ class WeatherViewController: UIViewController, SetLocation, OpenClose{
     // MARK: - UI Update
     
     private func updateUI() {
-        guard let forecast = forecastWeather,
+        guard let forecast = weatherViewModel.forecastWeather,
               let current = forecast.current,
               let conditionText = current.condition?.text,
               let conditionIcon = current.condition?.iconURL,
@@ -464,8 +455,7 @@ class WeatherViewController: UIViewController, SetLocation, OpenClose{
                                   minTemp: todayForecast.mintempC)
             updateWeatherCondition(text: conditionText,
                                    url: conditionIcon)
-            configureHourlyWeather()
-            configureForecastWeather()
+            reloadCollections()
         }
     }
     
@@ -510,7 +500,6 @@ class WeatherViewController: UIViewController, SetLocation, OpenClose{
     }
     
     // MARK: - Weather Condition Update
-    
     private func updateWeatherCondition(text: String, url: URL) {
         let attributes: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 16),
                                                          .foregroundColor: UIColor.white]
@@ -518,39 +507,13 @@ class WeatherViewController: UIViewController, SetLocation, OpenClose{
                                                                                            attributes: attributes))
         weatherButton.kf.setImage(with: url,
                                   for: .normal)
-        
     }
     
-    // MARK: - Configure Collections
-    
-    private func configureHourlyWeather() {
-        guard let hours = forecastWeather?.forecast?.forecastday?.first?.hour else { return }
-        
-        let currentDateTime = Date()
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
-        let currentTimeString = dateFormatter.string(from: currentDateTime)
-        
-        hourlyWeather = hours.filter { $0.time! > currentTimeString }
-        
-        if let nextDayHours = forecastWeather?.forecast?.forecastday?[1].hour,
-           hourlyWeather!.count < 12 {
-            let missingCount = 12 - hourlyWeather!.count
-            for i in 0..<missingCount {
-                hourlyWeather?.append(nextDayHours[i])
-            }
-        }
-        
+    // MARK: - Reload Collections
+    private func reloadCollections() {
         hourlyCollection.reloadData()
         todayYesterdayCollection.reloadData()
         todayCollection.reloadData()
-    }
-    
-    private func configureForecastWeather() {
-        forecastExceptToday = forecastWeather?.forecast?.forecastday
-        let todayDate = getTodayDateString()
-        forecastExceptToday = forecastExceptToday?.filter { $0.date != todayDate }
-        
         forecastCollection.reloadData()
     }
     
@@ -638,9 +601,9 @@ extension WeatherViewController: UICollectionViewDelegate,
         if collectionView == todayYesterdayCollection {
             return 2
         } else if collectionView == hourlyCollection {
-            return hourlyWeather?.count ?? 0
+            return weatherViewModel.hourlyWeatherData()?.count ?? 0
         } else if collectionView == forecastCollection {
-            return forecastExceptToday?.count ?? 0
+            return weatherViewModel.forecastExceptToday()?.count ?? 0
         }
         return 3
     }
@@ -652,32 +615,35 @@ extension WeatherViewController: UICollectionViewDelegate,
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "TodayYesterdayCollectionViewCell",
                                                           for: indexPath) as! TodayYesterdayCollectionViewCell
             
-            guard let max = forecastWeather?.forecast?.forecastday?[0].day?.maxtempC,
-                  let min = forecastWeather?.forecast?.forecastday?[0].day?.mintempC else {
-                return cell
-            }
-            
+
             let attributes = attributedTextStyle()
-            cell.maxButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(max))°",
-                                                                                                attributes: attributes))
-            cell.minButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(min))°",
-                                                                                                attributes: attributes))
+            
+            var max: Double?
+            var min: Double?
             
             if indexPath.row == 0 {
                 cell.label.text = "Today"
                 addSeparator(to: cell,
                              topPadding: 15)
+                max = weatherViewModel.forecast(at: 0)?.day?.maxtempC
+                min = weatherViewModel.forecast(at: 0)?.day?.mintempC
+                
             } else if indexPath.row == 1 {
                 cell.label.text = "Yesterday"
+                max = weatherViewModel.history(at: 0)?.day?.maxtempC
+                min = weatherViewModel.history(at: 0)?.day?.mintempC
             }
-            
+            cell.maxButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(max ?? 0))°",
+                                                                                                attributes: attributes))
+            cell.minButton.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(min ?? 0))°",
+                                                                                                attributes: attributes))
             return cell
             
         } else if collectionView == hourlyCollection {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "HourlyCollectionViewCell",
                                                           for: indexPath) as! HourlyCollectionViewCell
             
-            if let hourly = hourlyWeather?[indexPath.row],
+            if let hourly = weatherViewModel.hourlyWeatherData()?[indexPath.row],
                let time = hourly.time,
                let tempC = hourly.tempC,
                let url = hourly.condition?.iconURL {
@@ -693,7 +659,7 @@ extension WeatherViewController: UICollectionViewDelegate,
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "ForecastCollectionViewCell",
                                                           for: indexPath) as! ForecastCollectionViewCell
             
-            if let forecast = forecastExceptToday?[indexPath.row] {
+            if let forecast = weatherViewModel.forecastExceptToday()?[indexPath.row] {
                 cell.forecastDay = forecast
                 cell.delegate = self
                 cell.indexPath = indexPath
@@ -735,21 +701,21 @@ extension WeatherViewController: UICollectionViewDelegate,
         
         switch indexPath.row {
         case 0:
-            if let rainChance = forecastWeather?.forecast?.forecastday?[0].day?.dailyChanceOfRain {
+            if let rainChance = weatherViewModel.forecast(at: 0)?.day?.dailyChanceOfRain {
                 cell.label.text = "Slight chance of rain"
                 cell.button.setImage(UIImage(named: "drop")?.withRenderingMode(.alwaysOriginal), for: .normal)
                 cell.button.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(rainChance) %", attributes: attributes))
                 addSeparator(to: cell, topPadding: 45)
             }
         case 1:
-            if let wind = forecastWeather?.current?.windKph {
+            if let wind = weatherViewModel.forecastWeather?.current?.windKph {
                 cell.label.text = "Gentle breeze now"
                 cell.button.setImage(UIImage(systemName: "arrow.up.right"), for: .normal)
                 cell.button.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "\(Int(wind)) km/h", attributes: attributes))
                 addSeparator(to: cell, topPadding: 45)
             }
         case 2:
-            if let uv = forecastWeather?.current?.uv {
+            if let uv = weatherViewModel.forecastWeather?.current?.uv {
                 cell.label.text = "Low sunburn risk today"
                 cell.button.setImage(UIImage(systemName: "sun.min.fill")?.withTintColor(.systemYellow, renderingMode: .alwaysOriginal), for: .normal)
                 cell.button.configuration?.attributedTitle = AttributedString(NSAttributedString(string: "UVI \(Int(uv))", attributes: attributes))
